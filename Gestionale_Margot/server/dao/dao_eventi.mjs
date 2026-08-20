@@ -1,0 +1,355 @@
+import db from './db.mjs';
+
+const GIORNI_SCADENZA_GRAFICA = 7;
+
+// Crea le tabelle "eventi", "notifiche_grafica", "notifiche_pagamento" e
+// "iscrizioni_volontari" se non esistono già
+export const initDb = () => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      CREATE TABLE IF NOT EXISTS eventi (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        tipo TEXT NOT NULL,
+        costo REAL NOT NULL DEFAULT 0,
+        data_evento TEXT NOT NULL,
+        max_volontari INTEGER NOT NULL DEFAULT 0,
+        creato_da INTEGER NOT NULL,
+        creato_il TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (creato_da) REFERENCES Users(id)
+      )
+    `;
+    db.run(query, (err) => {
+      if (err) return reject(err);
+
+      const query2 = `
+        CREATE TABLE IF NOT EXISTS notifiche_grafica (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          evento_id INTEGER NOT NULL,
+          scadenza TEXT NOT NULL,
+          stato TEXT NOT NULL DEFAULT 'da_fare',
+          creato_il TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          completato_il TEXT,
+          FOREIGN KEY (evento_id) REFERENCES eventi(id)
+        )
+      `;
+      db.run(query2, (err2) => {
+        if (err2) return reject(err2);
+
+        const query3 = `
+          CREATE TABLE IF NOT EXISTS notifiche_pagamento (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            evento_id INTEGER NOT NULL,
+            stato TEXT NOT NULL DEFAULT 'da_pagare',
+            creato_il TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            pagato_il TEXT,
+            FOREIGN KEY (evento_id) REFERENCES eventi(id)
+          )
+        `;
+        db.run(query3, (err3) => {
+          if (err3) return reject(err3);
+
+          const query4 = `
+            CREATE TABLE IF NOT EXISTS iscrizioni_volontari (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              evento_id INTEGER NOT NULL,
+              utente_id INTEGER NOT NULL,
+              creato_il TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (evento_id) REFERENCES eventi(id),
+              FOREIGN KEY (utente_id) REFERENCES Users(id),
+              UNIQUE (evento_id, utente_id)
+            )
+          `;
+          db.run(query4, (err4) => {
+            if (err4) reject(err4);
+            else resolve();
+          });
+        });
+      });
+    });
+  });
+};
+
+// Tutti gli eventi, con lo username di chi li ha creati, lo stato
+// delle notifiche collegate (grafica/pagamento) e il numero di
+// volontari già iscritti, utile per mostrare indicatori rapidi nel calendario.
+export const getAllEventi = () => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT
+        eventi.*,
+        Users.username AS creato_da_username,
+        notifiche_grafica.stato AS grafica_stato,
+        notifiche_pagamento.stato AS pagamento_stato,
+        COALESCE(iscritti.numero, 0) AS iscritti_count
+      FROM eventi
+      JOIN Users ON eventi.creato_da = Users.id
+      LEFT JOIN notifiche_grafica ON notifiche_grafica.evento_id = eventi.id
+      LEFT JOIN notifiche_pagamento ON notifiche_pagamento.evento_id = eventi.id
+      LEFT JOIN (
+        SELECT evento_id, COUNT(*) AS numero FROM iscrizioni_volontari GROUP BY evento_id
+      ) AS iscritti ON iscritti.evento_id = eventi.id
+      ORDER BY data_evento ASC
+    `;
+    db.all(sql, [], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+};
+
+export const getEventoById = (id) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT
+        eventi.*,
+        Users.username AS creato_da_username,
+        notifiche_grafica.stato AS grafica_stato,
+        notifiche_pagamento.stato AS pagamento_stato,
+        COALESCE(iscritti.numero, 0) AS iscritti_count
+      FROM eventi
+      JOIN Users ON eventi.creato_da = Users.id
+      LEFT JOIN notifiche_grafica ON notifiche_grafica.evento_id = eventi.id
+      LEFT JOIN notifiche_pagamento ON notifiche_pagamento.evento_id = eventi.id
+      LEFT JOIN (
+        SELECT evento_id, COUNT(*) AS numero FROM iscrizioni_volontari GROUP BY evento_id
+      ) AS iscritti ON iscritti.evento_id = eventi.id
+      WHERE eventi.id = ?
+    `;
+    db.get(sql, [id], (err, row) => {
+      if (err) reject(err);
+      else if (!row) resolve({ error: 'Evento non trovato' });
+      else resolve(row);
+    });
+  });
+};
+
+// Calcola la scadenza per il gruppo Grafica: una settimana PRIMA della
+// data dell'evento (non una settimana dopo la creazione dell'evento).
+// Se l'evento viene creato a meno di 7 giorni dalla data stessa, la
+// scadenza risulterà già superata: è corretto così, segnala che il
+// tempo a disposizione della grafica è già ridotto rispetto all'ideale.
+const calcolaScadenzaGrafica = (dataEvento) => {
+  const scadenza = new Date(dataEvento);
+  scadenza.setDate(scadenza.getDate() - GIORNI_SCADENZA_GRAFICA);
+  return scadenza.toISOString();
+};
+
+// Crea l'evento e, in automatico, le notifiche per Grafica (scadenza una
+// settimana prima dell'evento) e per Amministrazione (da pagare, senza scadenza).
+export const createEvento = (evento, creatoDa) => {
+  return new Promise((resolve, reject) => {
+    const sql = 'INSERT INTO eventi (nome, tipo, costo, data_evento, max_volontari, creato_da) VALUES (?, ?, ?, ?, ?, ?)';
+
+    db.run(sql, [evento.nome, evento.tipo, evento.costo, evento.data_evento, evento.max_volontari || 0, creatoDa], function (err) {
+      if (err) return reject(err);
+
+      const eventoId = this.lastID;
+      const scadenza = calcolaScadenzaGrafica(evento.data_evento);
+
+      const sqlNotificaGrafica = 'INSERT INTO notifiche_grafica (evento_id, scadenza) VALUES (?, ?)';
+      db.run(sqlNotificaGrafica, [eventoId, scadenza], (errGrafica) => {
+        if (errGrafica) return reject(errGrafica);
+
+        const sqlNotificaPagamento = 'INSERT INTO notifiche_pagamento (evento_id) VALUES (?)';
+        db.run(sqlNotificaPagamento, [eventoId], (errPagamento) => {
+          if (errPagamento) return reject(errPagamento);
+          resolve({ id: eventoId, ...evento, creato_da: creatoDa });
+        });
+      });
+    });
+  });
+};
+
+// Se la data dell'evento cambia, riallinea anche la scadenza Grafica
+// (solo se il lavoro non è già stato segnato completato, per non
+// "spostare indietro nel tempo" un lavoro già consegnato).
+export const updateEvento = (id, evento) => {
+  return new Promise((resolve, reject) => {
+    const sql = 'UPDATE eventi SET nome = ?, tipo = ?, costo = ?, data_evento = ?, max_volontari = ? WHERE id = ?';
+    db.run(sql, [evento.nome, evento.tipo, evento.costo, evento.data_evento, evento.max_volontari || 0, id], function (err) {
+      if (err) return reject(err);
+      if (this.changes === 0) return resolve({ error: 'Evento non trovato' });
+
+      const nuovaScadenza = calcolaScadenzaGrafica(evento.data_evento);
+      const sqlNotifica = "UPDATE notifiche_grafica SET scadenza = ? WHERE evento_id = ? AND stato != 'completato'";
+      db.run(sqlNotifica, [nuovaScadenza, id], (errNotifica) => {
+        if (errNotifica) reject(errNotifica);
+        else resolve(true);
+      });
+    });
+  });
+};
+
+// Elimina l'evento e tutto ciò che è collegato (notifiche Grafica/Pagamento, iscrizioni volontari)
+export const deleteEvento = (id) => {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM notifiche_grafica WHERE evento_id = ?', [id], (errGrafica) => {
+      if (errGrafica) return reject(errGrafica);
+
+      db.run('DELETE FROM notifiche_pagamento WHERE evento_id = ?', [id], (errPagamento) => {
+        if (errPagamento) return reject(errPagamento);
+
+        db.run('DELETE FROM iscrizioni_volontari WHERE evento_id = ?', [id], (errIscrizioni) => {
+          if (errIscrizioni) return reject(errIscrizioni);
+
+          db.run('DELETE FROM eventi WHERE id = ?', [id], function (err) {
+            if (err) reject(err);
+            else if (this.changes === 0) resolve({ error: 'Evento non trovato' });
+            else resolve(true);
+          });
+        });
+      });
+    });
+  });
+};
+
+// Bacheca Grafica: tutte le notifiche con nome/tipo/data dell'evento collegato
+export const getNotificheGrafica = () => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT notifiche_grafica.*, eventi.nome, eventi.tipo, eventi.data_evento
+      FROM notifiche_grafica
+      JOIN eventi ON notifiche_grafica.evento_id = eventi.id
+      ORDER BY
+        CASE WHEN notifiche_grafica.stato = 'da_fare' THEN 0 ELSE 1 END,
+        notifiche_grafica.scadenza ASC
+    `;
+    db.all(sql, [], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+};
+
+export const completaNotificaGrafica = (id) => {
+  return new Promise((resolve, reject) => {
+    const sql = "UPDATE notifiche_grafica SET stato = 'completato', completato_il = CURRENT_TIMESTAMP WHERE id = ?";
+    db.run(sql, [id], function (err) {
+      if (err) reject(err);
+      else if (this.changes === 0) resolve({ error: 'Notifica non trovata' });
+      else resolve(true);
+    });
+  });
+};
+
+// Bacheca Pagamenti (Amministrazione): tutte le notifiche con nome/costo/data dell'evento collegato
+export const getNotifichePagamento = () => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT notifiche_pagamento.*, eventi.nome, eventi.tipo, eventi.costo, eventi.data_evento
+      FROM notifiche_pagamento
+      JOIN eventi ON notifiche_pagamento.evento_id = eventi.id
+      ORDER BY
+        CASE WHEN notifiche_pagamento.stato = 'da_pagare' THEN 0 ELSE 1 END,
+        eventi.data_evento ASC
+    `;
+    db.all(sql, [], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+};
+
+export const segnaPagato = (id) => {
+  return new Promise((resolve, reject) => {
+    const sql = "UPDATE notifiche_pagamento SET stato = 'pagato', pagato_il = CURRENT_TIMESTAMP WHERE id = ?";
+    db.run(sql, [id], function (err) {
+      if (err) reject(err);
+      else if (this.changes === 0) resolve({ error: 'Notifica non trovata' });
+      else resolve(true);
+    });
+  });
+};
+
+// ---------------------------------------------------------
+// ISCRIZIONI VOLONTARI
+// ---------------------------------------------------------
+
+// Iscrive un volontario a un evento, controllando che ci sia ancora posto
+// e che non sia già iscritto. Fa tutto in una singola transazione logica
+// leggendo prima lo stato attuale, per dare un messaggio d'errore chiaro.
+export const iscriviVolontario = (eventoId, utenteId) => {
+  return new Promise((resolve, reject) => {
+    const sqlEvento = 'SELECT max_volontari FROM eventi WHERE id = ?';
+    db.get(sqlEvento, [eventoId], (errEvento, evento) => {
+      if (errEvento) return reject(errEvento);
+      if (!evento) return resolve({ error: 'Evento non trovato' });
+
+      const sqlConteggio = 'SELECT COUNT(*) AS numero FROM iscrizioni_volontari WHERE evento_id = ?';
+      db.get(sqlConteggio, [eventoId], (errConteggio, riga) => {
+        if (errConteggio) return reject(errConteggio);
+
+        if (riga.numero >= evento.max_volontari) {
+          return resolve({ error: 'Posti esauriti per questo evento' });
+        }
+
+        const sqlInsert = 'INSERT INTO iscrizioni_volontari (evento_id, utente_id) VALUES (?, ?)';
+        db.run(sqlInsert, [eventoId, utenteId], (errInsert) => {
+          if (errInsert) {
+            if (errInsert.message.includes('UNIQUE')) {
+              return resolve({ error: 'Sei già iscritto a questo evento' });
+            }
+            return reject(errInsert);
+          }
+          resolve(true);
+        });
+      });
+    });
+  });
+};
+
+export const cancellaIscrizioneVolontario = (eventoId, utenteId) => {
+  return new Promise((resolve, reject) => {
+    const sql = 'DELETE FROM iscrizioni_volontari WHERE evento_id = ? AND utente_id = ?';
+    db.run(sql, [eventoId, utenteId], function (err) {
+      if (err) reject(err);
+      else if (this.changes === 0) resolve({ error: 'Non risulti iscritto a questo evento' });
+      else resolve(true);
+    });
+  });
+};
+
+// Elenco degli username iscritti a un evento (per chi organizza)
+export const getIscrittiEvento = (eventoId) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT Users.id, Users.username, iscrizioni_volontari.creato_il
+      FROM iscrizioni_volontari
+      JOIN Users ON iscrizioni_volontari.utente_id = Users.id
+      WHERE iscrizioni_volontari.evento_id = ?
+      ORDER BY iscrizioni_volontari.creato_il ASC
+    `;
+    db.all(sql, [eventoId], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+};
+
+// Tutti gli evento_id a cui un utente è iscritto, per marcare "iscritto" nella lista eventi
+export const getEventiIdIscrittoUtente = (utenteId) => {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT evento_id FROM iscrizioni_volontari WHERE utente_id = ?', [utenteId], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows.map((r) => r.evento_id));
+    });
+  });
+};
+
+// Eventi a cui un volontario è iscritto, con i dettagli dell'evento ("I miei eventi")
+export const getEventiIscrittoUtente = (utenteId) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT eventi.*, iscrizioni_volontari.creato_il AS iscritto_il
+      FROM iscrizioni_volontari
+      JOIN eventi ON iscrizioni_volontari.evento_id = eventi.id
+      WHERE iscrizioni_volontari.utente_id = ?
+      ORDER BY eventi.data_evento ASC
+    `;
+    db.all(sql, [utenteId], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+};

@@ -1,0 +1,221 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+/* ============================================================
+   PALETTE — "Cantina": rosso vino profondo + oro come accento
+   ============================================================ */
+:root {
+  --wine-900: #260810;
+  --wine-800: #3d0d1a;
+  --wine-700: #591226;
+  --wine-600: #7f1934;
+  --wine-500: #a8243f;
+  --wine-400: #c8425c;
+  --wine-100: #f7e3e7;
+
+  --gold: #c9a227;
+  --gold-soft: #e7cf7f;
+
+  --cream: #faf5ef;
+  --paper: #ffffff;
+  --ink: #241419;
+  --ink-soft: #6f5b5f;
+  --line: #ead9dc;
+
+  --shadow-sm: 0 2px 8px rgba(38, 8, 16, 0.08);
+  --shadow-md: 0 10px 24px rgba(38, 8, 16, 0.12);
+  --shadow-lg: 0 18px 40px rgba(38, 8, 16, 0.18);
+
+  --font-heading: 'Playfair Display', Georgia, serif;
+  --font-body: 'Inter', system-ui, 'Segoe UI', sans-serif;
+
+  color-scheme: light;
+
+  /* ---- Override delle variabili Bootstrap: il "warning" diventa
+     il colore brand (rosso vino), il "dark" un bordeaux quasi nero ---- */
+  --bs-warning: var(--wine-600);
+  --bs-warning-rgb: 127, 25, 52;
+  --bs-warning-text-emphasis: var(--wine-700);
+  --bs-warning-bg-subtle: var(--wine-100);
+  --bs-warning-border-subtle: var(--wine-400);
+
+  --bs-dark: var(--wine-900);
+  --bs-dark-rgb: 38, 8, 16;
+
+  --bs-primary: var(--wine-700);
+  --bs-primary-rgb: 89, 18, 38;
+
+  --bs-body-font-family: var(--font-body);
+  --bs-body-color: var(--ink);
+  --bs-body-bg: var(--cream);
+  --bs-border-color: var(--line);
+  --bs-link-color: var(--wine-600);
+  --bs-link-hover-color: var(--wine-700);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--cream);
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(127, 25, 52, 0.06), transparent 45%),
+    radial-gradient(circle at 0% 100%, rgba(201, 162, 39, 0.07), transparent 40%);
+  background-attachment: fixed;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, .navbar-brand {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--wine-900);
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: 40px;
+  margin: 24px 0;
+}
+
+h2 {
+  font-size: 26px;
+  margin: 0 0 8px;
+}
+
+p { margin: 0; }
+
+a {
+  transition: color 0.15s ease;
+}
+
+/* Scrollbar personalizzata */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--cream); }
+::-webkit-scrollbar-thumb {
+  background: var(--wine-400);
+  border-radius: 8px;
+  border: 2px solid var(--cream);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--wine-600); }
+
+/* Focus visibile ovunque, accessibilità */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   Override componenti Bootstrap più usati nell'app
+   ============================================================ */
+
+/* Bottoni "warning" -> rosso vino con testo chiaro invece del giallo/nero standard */
+.btn-warning {
+  color: #fff !important;
+  border-color: var(--wine-700);
+}
+.btn-warning:hover,
+.btn-warning:focus {
+  background-color: var(--wine-700) !important;
+  border-color: var(--wine-700) !important;
+  color: #fff !important;
+  box-shadow: var(--shadow-md);
+}
+
+.btn-outline-warning {
+  color: var(--wine-600);
+  border-color: var(--wine-600);
+}
+.btn-outline-warning:hover {
+  background-color: var(--wine-600);
+  border-color: var(--wine-600);
+  color: #fff;
+}
+
+.btn {
+  border-radius: 8px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+
+.btn-success { background-color: #3f6b3a; border-color: #3f6b3a; }
+.btn-success:hover { background-color: #345a2f; border-color: #345a2f; }
+
+.btn-danger { background-color: #9c2b2b; border-color: #9c2b2b; }
+.btn-danger:hover { background-color: #7f2222; border-color: #7f2222; }
+
+.text-warning { color: var(--wine-600) !important; }
+
+.spinner-border {
+  color: var(--wine-600) !important;
+}
+
+/* Badge quantità più leggibili */
+.badge.bg-secondary {
+  background-color: var(--wine-100) !important;
+  color: var(--wine-800) !important;
+  font-weight: 700;
+  border: 1px solid var(--wine-400);
+}
+.badge.bg-danger {
+  background-color: #9c2b2b !important;
+}
+
+.badge.qty-badge--warning {
+  background-color: #d9a441 !important;
+  color: #3d2b06 !important;
+}
+
+.text-wine {
+  color: var(--wine-700) !important;
+}
+
+.ordine-input-quantita {
+  width: 72px;
+}
+
+/* ============================================================
+   STAMPA (usata dalla pagina "Cosa Ordinare" per l'export PDF
+   tramite la finestra di stampa del browser)
+   ============================================================ */
+@media print {
+  .navbar,
+  .btn,
+  .nav-tabs {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .table {
+    box-shadow: none !important;
+  }
+}
+
+/* Alert coerenti col tema */
+.alert-warning {
+  background-color: var(--wine-100);
+  border-color: var(--wine-400);
+  color: var(--wine-800);
+}
+.alert-danger {
+  background-color: #fbe9e9;
+  border-color: #e3a3a3;
+  color: #7a1f1f;
+}
+.alert-success {
+  background-color: #eaf2e8;
+  border-color: #a9cba1;
+  color: #2f4d2a;
+}

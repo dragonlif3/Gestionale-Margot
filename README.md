@@ -69,16 +69,11 @@ Nel Frontend (config.js): Cerca la variabile API_URL e sostituisci l'IP di fallb
 C. Avvia il Backend (Database e API)
 Dal terminale (nella cartella del server), lancia questo comando per accendere il motore del gestionale:
 
-Bash
 npm run dev
+
 D. Avvia il Frontend (Interfaccia React)
 Apri un nuovo terminale (senza chiudere quello del backend!), spostati nella cartella del frontend e accendi il sito esponendolo alla rete locale:
 
-Bash
-npm run dev -- --host
-(L'aggiunta di --host è obbligatoria, altrimenti il sito rimarrà bloccato solo all'interno del tuo PC!)
+nodemon index.mjs
 
 A questo punto, il terminale ti mostrerà un indirizzo web (tipo http://192.168.1.x:5173). Digitalo sul browser del PC o del telefono e... benvenuto nel Gestionale Margot! 🍷
-
-
-In questo modo, chiunque metta le mani sul codice saprà esattamente come configurarlo in meno di 5 minuti. È un readme da manuale!

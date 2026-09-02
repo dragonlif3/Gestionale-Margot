@@ -1,3 +1,18 @@
+# Dipendenze
 node_modules/
-.env
+
+# Database
 GM.db
+GM.db-*
+
+# Variabili d'ambiente (Backend e Frontend)
+.env
+.env.*
+env.local
+
+# Cartelle di Build (Vite/React)
+dist/
+build/
+
+# File di sistema macOS
+.DS_Store

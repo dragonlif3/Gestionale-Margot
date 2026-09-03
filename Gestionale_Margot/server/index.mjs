@@ -25,6 +25,7 @@ app.use('/images', express.static('images'))
 const allowedOrigins = [
   'http://localhost:5173',
   'http://192.168.1.27:5173',
+  'http://192.168.42.135:5173',
   'http://192.168.42.32:5173',
   ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
 ];

@@ -126,7 +126,7 @@ router.put('/prodotti/:id/quantita', hasRole('amministrazione', 'bar'), async (r
   }
 
   try {
-    const result = await updateQuantitaProdotto(prodottoId, nuovaQuantita);
+    const result = await updateQuantitaProdotto(prodottoId, nuovaQuantita, req.user.username);
 
     if (result.error) {
       return res.status(404).json({ error: result.error });

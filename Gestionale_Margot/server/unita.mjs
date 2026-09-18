@@ -21,3 +21,13 @@ export const UNITA_MULTIPLE = {
 export const isUnitaSingola = (unita) => Object.prototype.hasOwnProperty.call(UNITA_SINGOLE, unita);
 export const isUnitaMultipla = (unita) => Object.prototype.hasOwnProperty.call(UNITA_MULTIPLE, unita);
 export const isUnitaValida = (unita) => isUnitaSingola(unita) || isUnitaMultipla(unita);
+
+// Etichetta dell'unità con cui il prodotto viene davvero contato in magazzino:
+// per le unità multiple è il contenuto (es. "lattine"), altrimenti l'unità stessa.
+// Specchio di unitaConteggio() in unita.js lato frontend.
+export const unitaConteggioLabel = (prodotto) => {
+  if (isUnitaMultipla(prodotto.unita) && prodotto.unita_contenuto) {
+    return prodotto.unita_contenuto;
+  }
+  return UNITA_SINGOLE[prodotto.unita] || prodotto.unita;
+};

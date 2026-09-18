@@ -35,6 +35,14 @@ function NavHeader(props) {
               </Nav.Link>
             )}
 
+            {/* Link ai Consumi (solo Amministrazione e Bar) */}
+            {props.loggedIn && (props.user?.ruolo === 'amministrazione' || props.user?.ruolo === 'bar') && (
+              <Nav.Link as={Link} to="/consumi" className="navbar-link me-3">
+                <i className="bi bi-graph-down-arrow me-1"></i>
+                Consumi
+              </Nav.Link>
+            )}
+
             {/* Link agli Eventi (visibile a tutti i loggati) */}
             {props.loggedIn && (
               <Nav.Link as={Link} to="/calendario" className="navbar-link me-3">

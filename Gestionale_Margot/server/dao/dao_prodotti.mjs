@@ -1,32 +1,6 @@
 import db from './db.mjs';
-
-// Crea la tabella prodotti con lo schema completo (nuove installazioni).
-// Per i DB già esistenti con lo schema vecchio, usa lo script
-// migrazione_prodotti.mjs una tantum: CREATE TABLE IF NOT EXISTS non
-// aggiunge colonne a una tabella che esiste già.
-export const initDb = () => {
-  return new Promise((resolve, reject) => {
-    const query = `
-      CREATE TABLE IF NOT EXISTS prodotti (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT NOT NULL,
-        quantita INTEGER NOT NULL DEFAULT 0,
-        quantita_ottimale INTEGER NOT NULL DEFAULT 0,
-        prezzo REAL NOT NULL,
-        categoria TEXT,
-        sottocategoria TEXT,
-        unita TEXT NOT NULL DEFAULT 'bottiglia',
-        molteplicita INTEGER,
-        unita_contenuto TEXT
-      )
-    `;
-
-    db.run(query, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-};
+import { registraConsumo } from './dao_consumi.mjs';
+import { unitaConteggioLabel } from '../unita.mjs';
 
 // Recupera tutti i prodotti, ordinati per categoria/sottocategoria/nome
 // così il frontend li riceve già pronti per essere raggruppati.
@@ -109,14 +83,39 @@ export const updateProdotto = (id, prodotto) => {
   });
 };
 
-export const updateQuantitaProdotto = (id, nuovaQuantita) => {
+// Aggiorna la quantità e, se è una diminuzione (mai per i riassortimenti),
+// registra automaticamente il consumo nel log - usato sia dai tasti +/-
+// che da qualunque altro punto che tocchi la quantità "live".
+export const updateQuantitaProdotto = (id, nuovaQuantita, utenteUsername) => {
   return new Promise((resolve, reject) => {
-    const sql = 'UPDATE prodotti SET quantita = ? WHERE id = ?';
+    db.get('SELECT * FROM prodotti WHERE id = ?', [id], (errGet, prodotto) => {
+      if (errGet) return reject(errGet);
+      if (!prodotto) return resolve({ error: 'Prodotto non trovato' });
 
-    db.run(sql, [nuovaQuantita, id], function (err) {
-      if (err) reject(err);
-      else if (this.changes === 0) resolve({ error: 'Prodotto non trovato' });
-      else resolve(true);
+      const sql = 'UPDATE prodotti SET quantita = ? WHERE id = ?';
+      db.run(sql, [nuovaQuantita, id], function (err) {
+        if (err) return reject(err);
+
+        const consumato = prodotto.quantita - nuovaQuantita;
+        if (consumato > 0) {
+          const consumo = {
+            prodotto_id: prodotto.id,
+            nome: prodotto.nome,
+            categoria: prodotto.categoria,
+            sottocategoria: prodotto.sottocategoria,
+            unita_label: unitaConteggioLabel(prodotto),
+            quantita: consumato
+          };
+          // Non blocchiamo l'aggiornamento della quantità se la
+          // registrazione del consumo fallisce: l'inventario resta
+          // comunque corretto, si perde solo la riga di log.
+          registraConsumo(consumo, utenteUsername).catch((errConsumo) => {
+            console.error('Errore registrando il consumo (quantità comunque aggiornata):', errConsumo);
+          });
+        }
+
+        resolve(true);
+      });
     });
   });
 };

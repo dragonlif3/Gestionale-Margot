@@ -8,6 +8,7 @@ import NavHeader from './components/NavHeader';
 import { LoginForm } from './components/AuthComp';
 import { Magazzino } from './components/MagComp';
 import { CosaOrdinare } from './components/OrdiniComp';
+import { Consumi } from './components/ConsumiComp';
 import { Calendario } from './components/CalendarioComp';
 import { MieiEventi } from './components/MieiEventiComp';
 import AdminPanel from './components/AdminPanelComp';
@@ -113,6 +114,16 @@ export default function App() {
           element={
             !user ? <Navigate to="/login" />
               : puoVedereMagazzino ? <CosaOrdinare />
+              : <Navigate to="/calendario" />
+          } 
+        />
+
+        {/* Rotta Consumi: solo Amministrazione e Bar */}
+        <Route 
+          path="/consumi" 
+          element={
+            !user ? <Navigate to="/login" />
+              : puoVedereMagazzino ? <Consumi />
               : <Navigate to="/calendario" />
           } 
         />

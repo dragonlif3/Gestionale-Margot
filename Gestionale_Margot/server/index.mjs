@@ -24,6 +24,7 @@ app.use('/images', express.static('images'))
 // Origini ammesse: in .env puoi aggiungere ALLOWED_ORIGINS="http://192.168.1.23:5173,https://tuodominio.it"
 const allowedOrigins = [
   'http://localhost:5173',
+  'https://gestionale-margot-ten.vercel.app',
   ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
 ];
 

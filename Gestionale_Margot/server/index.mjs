@@ -46,7 +46,7 @@ app.use(cors(corsOptions));
 inizializzaDatabase().catch((err) => console.error('Errore inizializzazione DB:', err));
 
 app.use(session({
-  secret: 'super-secret-key',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false
 }));

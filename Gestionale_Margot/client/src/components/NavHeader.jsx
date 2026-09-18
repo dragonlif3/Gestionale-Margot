@@ -59,17 +59,12 @@ function NavHeader(props) {
               </Nav.Link>
             )}
 
-            {/* Bottone Admin (visibile SOLO agli admin) */}
+            {/* Link a Gestione Personale (solo Amministrazione) */}
             {props.loggedIn && props.user?.ruolo === 'amministrazione' && (
-              <Button 
-                variant="outline-warning" 
-                size="sm" 
-                className="me-3 my-2 my-lg-0"
-                onClick={props.handleShowAdmin} // Funzione per aprire il modale AdminPanel
-              >
-                <i className="bi bi-person-badge me-1"></i>
+              <Nav.Link as={Link} to="/personale" className="navbar-link me-3">
+                <i className="bi bi-people me-1"></i>
                 Personale
-              </Button>
+              </Nav.Link>
             )}
 
             {/* Gestione Login / Logout */}

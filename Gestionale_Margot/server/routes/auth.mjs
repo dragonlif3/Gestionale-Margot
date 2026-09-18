@@ -1,6 +1,6 @@
 import express from 'express';
 import passport from 'passport';
-import { createUser } from '../dao/dao_utenti.mjs'; // <-- Aggiunto l'import del DAO
+import { createUser, getAllUtenti, updateUtente, resetPassword, deleteUtente } from '../dao/dao_utenti.mjs';
 
 const router = express.Router();
 
@@ -8,17 +8,16 @@ const router = express.Router();
 // MIDDLEWARE DI SICUREZZA
 // ---------------------------------------------------------
 
-// Controlla se l'utente loggato è dell'Amministrazione
 const isAmministrazione = (req, res, next) => {
   if (req.isAuthenticated() && req.user && req.user.ruolo === 'amministrazione') {
     next();
   } else {
-    res.status(403).json({ error: "Solo l'Amministrazione può registrare nuovo personale." });
+    res.status(403).json({ error: "Solo l'Amministrazione può gestire il personale." });
   }
 };
 
 // ---------------------------------------------------------
-// ROTTE DI AUTENTICAZIONE E REGISTRAZIONE
+// ROTTE DI AUTENTICAZIONE
 // ---------------------------------------------------------
 
 router.post('/sessions', passport.authenticate('local'), function(req, res) {
@@ -39,26 +38,112 @@ router.delete('/sessions/current', (req, res) => {
   });
 });
 
-// NUOVA ROTTA: Registrazione dipendente (Protetta dal middleware isAdmin)
-router.post('/sessions/register', isAmministrazione, async (req, res) => {
+// ---------------------------------------------------------
+// ROTTE DI GESTIONE PERSONALE (solo Amministrazione)
+// ---------------------------------------------------------
+
+// Lista di tutto il personale
+router.get('/personale', isAmministrazione, async (req, res) => {
+  try {
+    const utenti = await getAllUtenti();
+    res.json(utenti);
+  } catch (err) {
+    console.error('Errore nel recupero del personale:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Registra un nuovo membro del personale
+router.post('/personale', isAmministrazione, async (req, res) => {
   const { username, password, ruolo } = req.body;
-  
-  // Controllo base per evitare campi vuoti
+
   if (!username || !password || !ruolo) {
     return res.status(400).json({ error: 'Compila tutti i campi' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'La password deve essere di almeno 6 caratteri' });
   }
 
   try {
     const result = await createUser(username, password, ruolo);
-    
-    if (result.error) {
-      // Cattura errori gestiti dal DAO (es. username già esistente)
-      return res.status(400).json({ error: result.error });
-    }
-    
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.status(201).json({ message: `Account "${username}" creato con successo.` });
+  } catch (err) {
+    console.error('Errore registrazione:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Modifica username e/o ruolo di un membro
+router.put('/personale/:id', isAmministrazione, async (req, res) => {
+  const { username, ruolo } = req.body;
+
+  if (!username || !ruolo) {
+    return res.status(400).json({ error: 'Username e ruolo sono obbligatori' });
+  }
+
+  // Un admin non può togliersi il ruolo da solo (si bloccherebbe fuori)
+  if (parseInt(req.params.id) === req.user.id && ruolo !== 'amministrazione') {
+    return res.status(400).json({ error: 'Non puoi cambiare il tuo stesso ruolo' });
+  }
+
+  try {
+    const result = await updateUtente(req.params.id, username, ruolo);
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.json({ message: 'Profilo aggiornato con successo.' });
+  } catch (err) {
+    console.error('Errore aggiornamento utente:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Reset password di un membro
+router.put('/personale/:id/password', isAmministrazione, async (req, res) => {
+  const { password } = req.body;
+
+  if (!password || password.length < 6) {
+    return res.status(400).json({ error: 'La nuova password deve essere di almeno 6 caratteri' });
+  }
+
+  try {
+    const result = await resetPassword(req.params.id, password);
+    if (result.error) return res.status(404).json({ error: result.error });
+    res.json({ message: 'Password aggiornata con successo.' });
+  } catch (err) {
+    console.error('Errore reset password:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Rimuove un membro del personale
+router.delete('/personale/:id', isAmministrazione, async (req, res) => {
+  // Un admin non può eliminare sé stesso
+  if (parseInt(req.params.id) === req.user.id) {
+    return res.status(400).json({ error: 'Non puoi eliminare il tuo stesso account' });
+  }
+
+  try {
+    const result = await deleteUtente(req.params.id);
+    if (result.error) return res.status(404).json({ error: result.error });
+    res.json({ message: 'Account rimosso con successo.' });
+  } catch (err) {
+    console.error('Errore eliminazione utente:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Mantieni la vecchia rotta per retrocompatibilità con AdminPanelComp
+// (verrà sostituita dal nuovo frontend, ma non rompe nulla nel frattempo)
+router.post('/sessions/register', isAmministrazione, async (req, res) => {
+  const { username, password, ruolo } = req.body;
+  if (!username || !password || !ruolo) {
+    return res.status(400).json({ error: 'Compila tutti i campi' });
+  }
+  try {
+    const result = await createUser(username, password, ruolo);
+    if (result.error) return res.status(400).json({ error: result.error });
     res.status(201).json({ message: 'Nuovo operatore registrato con successo!' });
   } catch (err) {
-    console.error("Errore registrazione:", err);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });

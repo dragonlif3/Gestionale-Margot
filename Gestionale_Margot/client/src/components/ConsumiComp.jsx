@@ -106,7 +106,7 @@ function Consumi() {
                 {pendenti}
               </Badge>
               <span className="text-muted">
-                {pendenti === 0 ? 'nessun movimento in attesa' : `movimento${pendenti === 1 ? '' : 'i'} in attesa dall'ultimo report`}
+                {pendenti === 0 ? 'nessun movimento in attesa' : `moviment${pendenti === 1 ? 'o' : 'i'} in attesa dall'ultimo report`}
               </span>
             </>
           )}

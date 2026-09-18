@@ -11,17 +11,13 @@ import { CosaOrdinare } from './components/OrdiniComp';
 import { Consumi } from './components/ConsumiComp';
 import { Calendario } from './components/CalendarioComp';
 import { MieiEventi } from './components/MieiEventiComp';
-import AdminPanel from './components/AdminPanelComp';
+import { GestionePersonale } from './components/GestionePersonaleComp';
 import NotFound from './components/NotFound';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  // Stato per controllare l'apertura del modale dell'Admin
-  const [showAdminModal, setShowAdminModal] = useState(false);
 
-  // 1. Controlla se c'è già una sessione attiva al ricaricamento della pagina
   useEffect(() => {
     fetch(`${API_URL}/api/sessions/current`, { credentials: 'include' })
       .then(res => {
@@ -33,7 +29,6 @@ export default function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  // 2. Funzione di Login
   const handleLogin = async (credentials) => {
     const res = await fetch(`${API_URL}/api/sessions`, {
       method: 'POST',
@@ -46,7 +41,6 @@ export default function App() {
     setUser(userData);
   };
 
-  // 3. Funzione di Logout
   const handleLogout = async () => {
     await fetch(`${API_URL}/api/sessions/current`, { 
       method: 'DELETE',
@@ -55,7 +49,6 @@ export default function App() {
     setUser(null);
   };
 
-  // Se sta ancora verificando la sessione al primo avvio, mostra un caricamento
   if (loading) {
     return (
       <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
@@ -68,22 +61,11 @@ export default function App() {
 
   return (
     <>
-      
-      {/* LA NAVBAR VA QUI: dentro il Router, ma prima delle Routes */}
       <NavHeader 
         loggedIn={!!user} 
         user={user} 
         handleLogout={handleLogout} 
-        handleShowAdmin={() => setShowAdminModal(true)} 
       />
-
-      {/* IL PANNELLO ADMIN: esiste solo se l'utente loggato è un admin */}
-      {user?.ruolo === 'amministrazione' && (
-        <AdminPanel 
-          show={showAdminModal} 
-          handleClose={() => setShowAdminModal(false)} 
-        />
-      )}
 
       {/* IL CONTENUTO DELLA PAGINA: cambia in base all'URL */}
       <Routes>
@@ -150,6 +132,16 @@ export default function App() {
           element={
             !user ? <Navigate to="/login" />
               : user.ruolo === 'volontari' ? <MieiEventi />
+              : <Navigate to="/calendario" />
+          } 
+        />
+
+        {/* Rotta Gestione Personale: solo Amministrazione */}
+        <Route 
+          path="/personale" 
+          element={
+            !user ? <Navigate to="/login" />
+              : user.ruolo === 'amministrazione' ? <GestionePersonale utenteCorrente={user} />
               : <Navigate to="/calendario" />
           } 
         />

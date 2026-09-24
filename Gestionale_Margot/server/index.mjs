@@ -55,10 +55,8 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    // 'none' in produzione per cross-domain, 'lax' in locale per localhost
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    // true in produzione (richiede HTTPS), false in locale (permette HTTP)
-    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax', // Il browser ora lo accetta perché pensa che frontend e backend siano lo stesso sito
+    secure: false,   // Express spedirà il cookie a Vercel senza bloccarlo
     maxAge: 1000 * 60 * 60 * 24 * 7
   }
 }));

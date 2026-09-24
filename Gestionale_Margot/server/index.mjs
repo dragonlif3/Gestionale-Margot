@@ -7,6 +7,7 @@ import prodottiRoutes from './routes/prodotti.mjs';
 import authRoutes from './routes/auth.mjs';
 import eventiRoutes from './routes/eventi.mjs';
 import consumiRoutes from './routes/consumi.mjs';
+import notificheRoutes from './routes/notifiche.mjs';
 import passport from 'passport';
 import session from 'express-session';
 import LocalStrategy from 'passport-local';
@@ -25,7 +26,6 @@ app.use('/images', express.static('images'))
 // Origini ammesse: in .env puoi aggiungere ALLOWED_ORIGINS="http://192.168.1.23:5173,https://tuodominio.it"
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://gestionale-margot-ten.vercel.app',
   ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
 ];
 
@@ -47,10 +47,20 @@ app.use(cors(corsOptions));
 // Crea le tabelle "prodotti", "eventi" e "notifiche_grafica" se non esistono già
 inizializzaDatabase().catch((err) => console.error('Errore inizializzazione DB:', err));
 
+// Istruzione fondamentale: dice a Express di fidarsi se si trova dietro proxy (indispensabile per i cookie secure)
+app.set('trust proxy', 1);
+
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    // 'none' in produzione per cross-domain, 'lax' in locale per localhost
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    // true in produzione (richiede HTTPS), false in locale (permette HTTP)
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 1000 * 60 * 60 * 24 * 7
+  }
 }));
 
 app.use(passport.authenticate('session'));
@@ -84,6 +94,7 @@ app.use('/api', prodottiRoutes);
 app.use('/api', authRoutes);
 app.use('/api', eventiRoutes);
 app.use('/api', consumiRoutes);
+app.use('/api', notificheRoutes);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`API server started at http://localhost:${PORT}`);

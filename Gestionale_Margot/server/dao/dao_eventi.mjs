@@ -1,4 +1,5 @@
 import db from './db.mjs';
+import { creaNotifica } from './dao_notifiche.mjs';
 
 const GIORNI_SCADENZA_GRAFICA = 7;
 
@@ -114,21 +115,46 @@ export const updateEvento = (id, evento) => {
 };
 
 // Elimina l'evento e tutto ciò che è collegato (notifiche Grafica/Pagamento, iscrizioni volontari)
+// Elimina l'evento e tutto ciò che è collegato (notifiche Grafica/Pagamento,
+// iscrizioni volontari) - ma prima avvisa ogni volontario che era iscritto,
+// così l'evento non "sparisce" semplicemente dalla loro vista.
 export const deleteEvento = (id) => {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM notifiche_grafica WHERE evento_id = ?', [id], (errGrafica) => {
-      if (errGrafica) return reject(errGrafica);
+    db.get('SELECT * FROM eventi WHERE id = ?', [id], (errGet, evento) => {
+      if (errGet) return reject(errGet);
+      if (!evento) return resolve({ error: 'Evento non trovato' });
 
-      db.run('DELETE FROM notifiche_pagamento WHERE evento_id = ?', [id], (errPagamento) => {
-        if (errPagamento) return reject(errPagamento);
+      db.all('SELECT utente_id FROM iscrizioni_volontari WHERE evento_id = ?', [id], (errIscritti, iscritti) => {
+        if (errIscritti) return reject(errIscritti);
 
-        db.run('DELETE FROM iscrizioni_volontari WHERE evento_id = ?', [id], (errIscrizioni) => {
-          if (errIscrizioni) return reject(errIscrizioni);
+        db.run('DELETE FROM notifiche_grafica WHERE evento_id = ?', [id], (errGrafica) => {
+          if (errGrafica) return reject(errGrafica);
 
-          db.run('DELETE FROM eventi WHERE id = ?', [id], function (err) {
-            if (err) reject(err);
-            else if (this.changes === 0) resolve({ error: 'Evento non trovato' });
-            else resolve(true);
+          db.run('DELETE FROM notifiche_pagamento WHERE evento_id = ?', [id], (errPagamento) => {
+            if (errPagamento) return reject(errPagamento);
+
+            db.run('DELETE FROM iscrizioni_volontari WHERE evento_id = ?', [id], (errIscrizioni) => {
+              if (errIscrizioni) return reject(errIscrizioni);
+
+              db.run('DELETE FROM eventi WHERE id = ?', [id], function (err) {
+                if (err) return reject(err);
+                if (this.changes === 0) return resolve({ error: 'Evento non trovato' });
+
+                if (iscritti.length === 0) return resolve(true);
+
+                const messaggio = `L'evento "${evento.nome}" del ${evento.data_evento} a cui eri iscritto è stato cancellato.`;
+
+                // L'evento è comunque già cancellato a questo punto: se la
+                // creazione di una notifica fallisse, lo logghiamo ma non
+                // facciamo fallire l'intera operazione per questo.
+                Promise.all(iscritti.map((i) => creaNotifica(i.utente_id, messaggio)))
+                  .then(() => resolve(true))
+                  .catch((errNotifiche) => {
+                    console.error('Errore creando le notifiche ai volontari:', errNotifiche);
+                    resolve(true);
+                  });
+              });
+            });
           });
         });
       });
@@ -201,31 +227,36 @@ export const segnaPagato = (id) => {
 // Iscrive un volontario a un evento, controllando che ci sia ancora posto
 // e che non sia già iscritto. Fa tutto in una singola transazione logica
 // leggendo prima lo stato attuale, per dare un messaggio d'errore chiaro.
+// L'INSERT stesso porta con sé la condizione "c'è ancora posto?", verificata
+// nello stesso istante in cui si scrive - non più "leggi il conteggio, poi
+// scrivi" in due passaggi separati, che lascerebbe una finestra in cui due
+// persone potrebbero prendere l'ultimo posto contemporaneamente.
 export const iscriviVolontario = (eventoId, utenteId) => {
   return new Promise((resolve, reject) => {
-    const sqlEvento = 'SELECT max_volontari FROM eventi WHERE id = ?';
-    db.get(sqlEvento, [eventoId], (errEvento, evento) => {
-      if (errEvento) return reject(errEvento);
-      if (!evento) return resolve({ error: 'Evento non trovato' });
-
-      const sqlConteggio = 'SELECT COUNT(*) AS numero FROM iscrizioni_volontari WHERE evento_id = ?';
-      db.get(sqlConteggio, [eventoId], (errConteggio, riga) => {
-        if (errConteggio) return reject(errConteggio);
-
-        if (riga.numero >= evento.max_volontari) {
-          return resolve({ error: 'Posti esauriti per questo evento' });
+    const sqlInsert = `
+      INSERT INTO iscrizioni_volontari (evento_id, utente_id)
+      SELECT ?, ?
+      WHERE (SELECT COUNT(*) FROM iscrizioni_volontari WHERE evento_id = ?)
+          < (SELECT max_volontari FROM eventi WHERE id = ?)
+    `;
+    db.run(sqlInsert, [eventoId, utenteId, eventoId, eventoId], function (errInsert) {
+      if (errInsert) {
+        if (errInsert.message.includes('UNIQUE')) {
+          return resolve({ error: 'Sei già iscritto a questo evento' });
         }
+        return reject(errInsert);
+      }
 
-        const sqlInsert = 'INSERT INTO iscrizioni_volontari (evento_id, utente_id) VALUES (?, ?)';
-        db.run(sqlInsert, [eventoId, utenteId], (errInsert) => {
-          if (errInsert) {
-            if (errInsert.message.includes('UNIQUE')) {
-              return resolve({ error: 'Sei già iscritto a questo evento' });
-            }
-            return reject(errInsert);
-          }
-          resolve(true);
-        });
+      if (this.changes > 0) {
+        return resolve(true);
+      }
+
+      // Niente inserito: o l'evento non esiste, o i posti sono esauriti.
+      // Li distinguiamo con una query separata solo per dare un errore chiaro.
+      db.get('SELECT max_volontari FROM eventi WHERE id = ?', [eventoId], (errEvento, evento) => {
+        if (errEvento) return reject(errEvento);
+        if (!evento) return resolve({ error: 'Evento non trovato' });
+        resolve({ error: 'Posti esauriti per questo evento' });
       });
     });
   });

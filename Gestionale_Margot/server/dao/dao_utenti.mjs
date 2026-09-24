@@ -110,6 +110,37 @@ export const updateUtente = (id, username, ruolo) => {
   });
 };
 
+// Cambio password fatto dall'utente stesso: a differenza di resetPassword
+// (che l'Amministrazione usa su altri, senza conoscerla), qui si deve
+// verificare la password attuale prima di sostituirla.
+export const cambiaPropriaPassword = (id, vecchiaPassword, nuovaPassword) => {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT * FROM Users WHERE id = ?', [id], (errGet, row) => {
+      if (errGet) return reject(errGet);
+      if (!row) return resolve({ error: 'Utente non trovato' });
+
+      crypto.scrypt(vecchiaPassword, row.salt, 16, (errVerifica, hashVecchia) => {
+        if (errVerifica) return reject(errVerifica);
+
+        if (!crypto.timingSafeEqual(Buffer.from(row.password, 'hex'), hashVecchia)) {
+          return resolve({ error: 'La password attuale non è corretta' });
+        }
+
+        const nuovoSalt = crypto.randomBytes(16).toString('hex');
+        crypto.scrypt(nuovaPassword, nuovoSalt, 16, (errNuova, hashNuova) => {
+          if (errNuova) return reject(errNuova);
+
+          const sql = 'UPDATE Users SET password = ?, salt = ? WHERE id = ?';
+          db.run(sql, [hashNuova.toString('hex'), nuovoSalt, id], function (errUpdate) {
+            if (errUpdate) reject(errUpdate);
+            else resolve(true);
+          });
+        });
+      });
+    });
+  });
+};
+
 // Reset password: genera un nuovo salt + hash, lo salva, ritorna la
 // password temporanea in chiaro così l'admin può comunicarla all'utente.
 export const resetPassword = (id, nuovaPassword) => {

@@ -38,16 +38,22 @@ function Magazzino({ user }) {
     fetchProdotti();
   }, []);
 
-  const handleAggiornaQuantita = async (id, nuovaQuantita) => {
-    if (nuovaQuantita < 0) return;
+  // Manda un DELTA relativo (negativo per togliere, positivo per aggiungere),
+  // non più un valore assoluto calcolato qui: così è il server, con l'ultimo
+  // dato reale, a decidere il risultato finale - anche se nel frattempo
+  // qualcun altro ha già toccato lo stesso prodotto.
+  const handleAggiornaQuantita = async (id, delta) => {
     try {
       const response = await fetch(`${API_URL}/api/prodotti/${id}/quantita`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ quantita: nuovaQuantita })
+        body: JSON.stringify({ delta })
       });
-      if (!response.ok) throw new Error("Errore durante l'aggiornamento");
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Errore durante l'aggiornamento");
+      }
       fetchProdotti();
     } catch (err) {
       alert(err.message);
@@ -158,7 +164,7 @@ function Magazzino({ user }) {
       daAggiungere = parseInt(formData.get('quantita_da_aggiungere'), 10) || 0;
     }
 
-    await handleAggiornaQuantita(prodotto.id, prodotto.quantita + daAggiungere);
+    await handleAggiornaQuantita(prodotto.id, daAggiungere);
     setShowRifornisci(null);
   };
 
@@ -299,7 +305,7 @@ function Magazzino({ user }) {
                         size="sm"
                         className="me-1"
                         disabled={prodotto.quantita === 0}
-                        onClick={() => handleAggiornaQuantita(prodotto.id, prodotto.quantita - 1)}
+                        onClick={() => handleAggiornaQuantita(prodotto.id, -1)}
                         title="Togli 1"
                       >
                         <i className="bi bi-dash-lg"></i>
@@ -308,7 +314,7 @@ function Magazzino({ user }) {
                         variant="outline-success"
                         size="sm"
                         className="me-1"
-                        onClick={() => handleAggiornaQuantita(prodotto.id, prodotto.quantita + 1)}
+                        onClick={() => handleAggiornaQuantita(prodotto.id, 1)}
                         title="Aggiungi 1"
                       >
                         <i className="bi bi-plus-lg"></i>

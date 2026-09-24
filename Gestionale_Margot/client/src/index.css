@@ -181,6 +181,18 @@ a {
   color: var(--wine-700) !important;
 }
 
+.dashboard-card {
+  color: inherit;
+  border: 1px solid var(--line);
+  transition: box-shadow 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+}
+.dashboard-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--wine-400);
+  transform: translateY(-2px);
+  color: inherit;
+}
+
 .ordine-input-quantita {
   width: 72px;
 }

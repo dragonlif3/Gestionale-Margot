@@ -12,6 +12,7 @@ import { Consumi } from './components/ConsumiComp';
 import { Calendario } from './components/CalendarioComp';
 import { MieiEventi } from './components/MieiEventiComp';
 import { GestionePersonale } from './components/GestionePersonaleComp';
+import { Dashboard } from './components/DashboardComp';
 import NotFound from './components/NotFound';
 
 export default function App() {
@@ -70,13 +71,11 @@ export default function App() {
       {/* IL CONTENUTO DELLA PAGINA: cambia in base all'URL */}
       <Routes>
         
-        {/* Rotta Principale: manda ciascuno alla sua pagina di riferimento */}
+        {/* Rotta Principale: la Dashboard, adattiva in base al ruolo */}
         <Route 
           path="/" 
           element={
-            !user ? <Navigate to="/login" />
-              : puoVedereMagazzino ? <Navigate to="/magazzino" />
-              : <Navigate to="/calendario" />
+            !user ? <Navigate to="/login" /> : <Dashboard user={user} />
           } 
         />
 

@@ -31,6 +31,54 @@ export const registraConsumo = (consumo, utenteUsername) => {
   });
 };
 
+// Finestra di tempo entro la quale un "+" viene considerato una correzione
+// di un "-" appena fatto per sbaglio, non un rifornimento vero e proprio.
+const FINESTRA_ANNULLAMENTO_MS = 5 * 60 * 1000; // 5 minuti
+
+// Quando la quantità di un prodotto AUMENTA, controlla se c'è un consumo
+// registrato pochissimo fa per quello stesso prodotto e, se sì, lo riduce
+// (o lo cancella del tutto) invece di lasciarlo lì come se fosse successo
+// davvero. Se non c'è nulla di recente, non fa niente: un rifornimento
+// vero, fatto ore o giorni dopo, non deve mai "ripulire" consumi passati
+// genuini solo perché tocca lo stesso prodotto.
+//
+// Funziona "a ritroso" (l'ultimo consumo registrato è il primo ad essere
+// ridotto): se prima hai tolto 1 e poi ancora 1, e infine ne riaggiungi 1,
+// ad essere annullato è l'ultimo dei due, non il primo.
+export const annullaConsumoRecente = (prodottoId, quantitaDaAnnullare) => {
+  return new Promise((resolve, reject) => {
+    const sql = 'SELECT * FROM consumi WHERE prodotto_id = ? ORDER BY creato_il DESC, id DESC LIMIT 1';
+    db.get(sql, [prodottoId], (err, riga) => {
+      if (err) return reject(err);
+      if (!riga) return resolve(quantitaDaAnnullare); // nessun consumo pendente da annullare
+
+      // creato_il è salvato da SQLite come 'YYYY-MM-DD HH:MM:SS' in UTC,
+      // senza 'T' né 'Z': va normalizzato prima di poterlo confrontare
+      // con un timestamp JS.
+      const creatoIlMs = new Date(riga.creato_il.replace(' ', 'T') + 'Z').getTime();
+      const eta = Date.now() - creatoIlMs;
+
+      if (eta > FINESTRA_ANNULLAMENTO_MS) {
+        return resolve(quantitaDaAnnullare); // troppo vecchio per essere una correzione al volo
+      }
+
+      if (riga.quantita <= quantitaDaAnnullare) {
+        // Il "+" copre (o supera) l'intero consumo pendente: lo rimuove del tutto.
+        db.run('DELETE FROM consumi WHERE id = ?', [riga.id], (errDelete) => {
+          if (errDelete) return reject(errDelete);
+          resolve(quantitaDaAnnullare - riga.quantita);
+        });
+      } else {
+        // Il "+" copre solo una parte del consumo pendente: lo riduce, non lo cancella.
+        db.run('UPDATE consumi SET quantita = quantita - ? WHERE id = ?', [quantitaDaAnnullare, riga.id], (errUpdate) => {
+          if (errUpdate) return reject(errUpdate);
+          resolve(0);
+        });
+      }
+    });
+  });
+};
+
 // Quanti movimenti sono in attesa di essere riportati, senza generarli
 // né svuotarli - utile per mostrare "N movimenti da controllare" in UI.
 export const getConteggioConsumiPendenti = () => {

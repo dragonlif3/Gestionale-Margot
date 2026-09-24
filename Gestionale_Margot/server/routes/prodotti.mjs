@@ -94,10 +94,15 @@ router.put('/prodotti/:id', hasRole('amministrazione', 'bar'), async (req, res) 
   if (erroreValidazione) return res.status(400).json({ error: erroreValidazione });
 
   try {
-    const { nome, quantita_ottimale, prezzo, categoria, sottocategoria, unita, molteplicita, unita_contenuto } = req.body;
+    const { nome, quantita, quantita_ottimale, prezzo, categoria, sottocategoria, unita, molteplicita, unita_contenuto } = req.body;
+
+    if (quantita === undefined || isNaN(quantita) || quantita < 0) {
+      return res.status(400).json({ error: 'Quantità non valida' });
+    }
 
     const prodottoAggiornato = {
       nome,
+      quantita,
       quantita_ottimale: quantita_ottimale || 0,
       prezzo,
       categoria: categoria || null,
@@ -119,17 +124,17 @@ router.put('/prodotti/:id', hasRole('amministrazione', 'bar'), async (req, res) 
 // PUT: Modifica le quantità (usato dai tasti +/- e dal riassortimento rapido)
 router.put('/prodotti/:id/quantita', hasRole('amministrazione', 'bar'), async (req, res) => {
   const prodottoId = req.params.id;
-  const nuovaQuantita = req.body.quantita;
+  const delta = req.body.delta;
 
-  if (nuovaQuantita === undefined || isNaN(nuovaQuantita) || nuovaQuantita < 0) {
-    return res.status(400).json({ error: 'Quantità non valida' });
+  if (delta === undefined || isNaN(delta) || !Number.isInteger(delta)) {
+    return res.status(400).json({ error: 'Delta non valido: deve essere un numero intero (negativo per togliere, positivo per aggiungere)' });
   }
 
   try {
-    const result = await updateQuantitaProdotto(prodottoId, nuovaQuantita, req.user.username);
+    const result = await updateQuantitaProdotto(prodottoId, delta, req.user.username);
 
     if (result.error) {
-      return res.status(404).json({ error: result.error });
+      return res.status(409).json({ error: result.error });
     }
 
     res.status(200).json({ message: 'Quantità aggiornata con successo' });

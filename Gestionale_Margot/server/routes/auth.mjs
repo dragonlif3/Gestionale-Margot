@@ -1,6 +1,6 @@
 import express from 'express';
 import passport from 'passport';
-import { createUser, getAllUtenti, updateUtente, resetPassword, deleteUtente } from '../dao/dao_utenti.mjs';
+import { createUser, getAllUtenti, updateUtente, resetPassword, deleteUtente, cambiaPropriaPassword } from '../dao/dao_utenti.mjs';
 
 const router = express.Router();
 
@@ -13,6 +13,14 @@ const isAmministrazione = (req, res, next) => {
     next();
   } else {
     res.status(403).json({ error: "Solo l'Amministrazione può gestire il personale." });
+  }
+};
+
+const isLoggedIn = (req, res, next) => {
+  if (req.isAuthenticated()) {
+    next();
+  } else {
+    res.status(401).json({ error: 'Devi effettuare il login' });
   }
 };
 
@@ -36,6 +44,33 @@ router.delete('/sessions/current', (req, res) => {
   req.logout(() => {
     res.end();
   });
+});
+
+// ---------------------------------------------------------
+// ACCOUNT PERSONALE (chiunque sia loggato, qualunque ruolo)
+// ---------------------------------------------------------
+
+// Cambio della propria password: a differenza di /personale/:id/password
+// (che l'Amministrazione usa su altri account senza conoscerne la
+// password), qui serve inserire la password attuale per confermarla.
+router.put('/account/password', isLoggedIn, async (req, res) => {
+  const { vecchiaPassword, nuovaPassword } = req.body;
+
+  if (!vecchiaPassword || !nuovaPassword) {
+    return res.status(400).json({ error: 'Inserisci sia la password attuale che quella nuova' });
+  }
+  if (nuovaPassword.length < 6) {
+    return res.status(400).json({ error: 'La nuova password deve essere di almeno 6 caratteri' });
+  }
+
+  try {
+    const result = await cambiaPropriaPassword(req.user.id, vecchiaPassword, nuovaPassword);
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.json({ message: 'Password cambiata con successo.' });
+  } catch (err) {
+    console.error('Errore cambio password personale:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
 });
 
 // ---------------------------------------------------------

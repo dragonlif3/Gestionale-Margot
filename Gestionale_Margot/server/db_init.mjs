@@ -114,6 +114,19 @@ const TABELLE = [
         creato_il TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `
+  },
+  {
+    nome: 'notifiche_utente',
+    sql: `
+      CREATE TABLE IF NOT EXISTS notifiche_utente (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        utente_id INTEGER NOT NULL,
+        messaggio TEXT NOT NULL,
+        letta INTEGER NOT NULL DEFAULT 0,
+        creato_il TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (utente_id) REFERENCES Users(id)
+      )
+    `
   }
 ];
 

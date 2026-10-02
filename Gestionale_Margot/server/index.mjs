@@ -12,10 +12,12 @@ import passport from 'passport';
 import session from 'express-session';
 import LocalStrategy from 'passport-local';
 import morgan from 'morgan';
+import connectSqlite3 from 'connect-sqlite3';
 
 //init
 const app = express();
 const PORT = 3000;
+const SQLiteStore = connectSqlite3(session);
 
 //middleware
 app.use(express.json());
@@ -51,6 +53,7 @@ inizializzaDatabase().catch((err) => console.error('Errore inizializzazione DB:'
 app.set('trust proxy', 1);
 
 app.use(session({
+  store: new SQLiteStore({ db: 'sessions.sqlite', dir: './' }),
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,

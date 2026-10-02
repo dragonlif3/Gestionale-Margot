@@ -127,6 +127,17 @@ const TABELLE = [
         FOREIGN KEY (utente_id) REFERENCES Users(id)
       )
     `
+  },
+  {
+    nome: 'report_consumi',
+    sql: `
+      CREATE TABLE IF NOT EXISTS report_consumi (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        generato_il TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        generato_da TEXT,
+        dati TEXT NOT NULL
+      )
+    `
   }
 ];
 

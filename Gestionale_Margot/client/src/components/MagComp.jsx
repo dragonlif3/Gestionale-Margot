@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Table, Button, Row, Col, Alert, Spinner, Badge, Modal, Form, InputGroup, Nav } from 'react-bootstrap';
 import { API_URL } from '../config';
 import { CATEGORIE, categoriaLabel, sottocategoriaLabel } from '../categorie';
-import { UNITA_SINGOLE, UNITA_MULTIPLE, isUnitaMultipla, unitaConteggio } from '../unita';
+import { UNITA, unitaConteggio } from '../unita';
 
 function Magazzino({ user }) {
   const [prodotti, setProdotti] = useState([]);
@@ -78,22 +78,7 @@ function Magazzino({ user }) {
     e.preventDefault();
     const formData = new FormData(e.target);
     const unita = formData.get('unita');
-    const multipla = isUnitaMultipla(unita);
-
-    let quantita;
-    if (!prodottoInModifica) {
-      // Nuovo prodotto: se l'unità è multipla, converto subito confezioni -> unità reali
-      if (multipla) {
-        const numConfezioni = parseInt(formData.get('num_confezioni'), 10) || 0;
-        const molteplicita = parseInt(formData.get('molteplicita'), 10) || 0;
-        quantita = numConfezioni * molteplicita;
-      } else {
-        quantita = parseInt(formData.get('quantita'), 10) || 0;
-      }
-    } else {
-      // Modifica: la quantità è sempre in unità reali, editabile direttamente
-      quantita = parseInt(formData.get('quantita'), 10) || 0;
-    }
+    const quantita = parseInt(formData.get('quantita'), 10) || 0;
 
     const payload = {
       nome: formData.get('nome'),
@@ -102,8 +87,6 @@ function Magazzino({ user }) {
       prezzo: parseFloat(formData.get('prezzo')),
       quantita_ottimale: parseInt(formData.get('quantita_ottimale'), 10) || 0,
       unita,
-      molteplicita: multipla ? parseInt(formData.get('molteplicita'), 10) || null : null,
-      unita_contenuto: multipla ? formData.get('unita_contenuto') : null,
       quantita
     };
 
@@ -123,10 +106,6 @@ function Magazzino({ user }) {
         throw new Error(data.error || 'Errore durante il salvataggio');
       }
 
-      // Se è un prodotto nuovo (non in modifica), la quantità va impostata
-      // con una seconda chiamata perché la creazione non la accetta oltre
-      // al valore iniziale già passato nel payload — nessuna azione ulteriore
-      // necessaria: il backend la salva già in fase di creazione.
       setShowFormModal(false);
       setProdottoInModifica(null);
       fetchProdotti();
@@ -154,15 +133,7 @@ function Magazzino({ user }) {
     e.preventDefault();
     const formData = new FormData(e.target);
     const prodotto = showRifornisci;
-    const multipla = isUnitaMultipla(prodotto.unita);
-
-    let daAggiungere;
-    if (multipla) {
-      const numConfezioni = parseInt(formData.get('num_confezioni'), 10) || 0;
-      daAggiungere = numConfezioni * (prodotto.molteplicita || 1);
-    } else {
-      daAggiungere = parseInt(formData.get('quantita_da_aggiungere'), 10) || 0;
-    }
+    const daAggiungere = parseInt(formData.get('quantita_da_aggiungere'), 10) || 0;
 
     await handleAggiornaQuantita(prodotto.id, daAggiungere);
     setShowRifornisci(null);
@@ -418,68 +389,19 @@ function Magazzino({ user }) {
             <Form.Group className="mb-3">
               <Form.Label>Unità</Form.Label>
               <Form.Select name="unita" required value={unitaForm} onChange={(e) => setUnitaForm(e.target.value)}>
-                <optgroup label="Unità singole">
-                  {Object.entries(UNITA_SINGOLE).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="Unità multiple (confezioni)">
-                  {Object.entries(UNITA_MULTIPLE).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
-                  ))}
-                </optgroup>
+                {Object.entries(UNITA).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
               </Form.Select>
+              <Form.Text className="text-muted">
+                Per Confezione/Scatola si conta la confezione intera (1, 2, 3...), non il contenuto: il prezzo e la quantità sono quelli della confezione.
+              </Form.Text>
             </Form.Group>
 
-            {isUnitaMultipla(unitaForm) ? (
-              <Row>
-                <Col md={4}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>{prodottoInModifica ? 'Unità per confezione' : 'N. confezioni iniziali'}</Form.Label>
-                    {prodottoInModifica ? (
-                      <Form.Control name="molteplicita" type="number" min="1" required defaultValue={prodottoInModifica?.molteplicita} />
-                    ) : (
-                      <Form.Control name="num_confezioni" type="number" min="0" required placeholder="Es. 1" />
-                    )}
-                  </Form.Group>
-                </Col>
-                {!prodottoInModifica && (
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Unità per confezione</Form.Label>
-                      <Form.Control name="molteplicita" type="number" min="1" required placeholder="Es. 24" />
-                    </Form.Group>
-                  </Col>
-                )}
-                <Col md={4}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Cosa contiene</Form.Label>
-                    <Form.Control name="unita_contenuto" type="text" required defaultValue={prodottoInModifica?.unita_contenuto} placeholder="Es. lattine" />
-                  </Form.Group>
-                </Col>
-                {prodottoInModifica && (
-                  <Col md={12}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Quantità attuale in magazzino ({unitaConteggio(prodottoInModifica)})</Form.Label>
-                      <Form.Control name="quantita" type="number" min="0" required defaultValue={prodottoInModifica?.quantita} />
-                      <Form.Text className="text-muted">Correggi qui solo se serve un aggiustamento manuale: i tasti +/- nella tabella già la aggiornano una unità alla volta.</Form.Text>
-                    </Form.Group>
-                  </Col>
-                )}
-              </Row>
-            ) : (
-              <Form.Group className="mb-3">
-                <Form.Label>{prodottoInModifica ? `Quantità attuale (${UNITA_SINGOLE[unitaForm]})` : `Quantità iniziale (${UNITA_SINGOLE[unitaForm]})`}</Form.Label>
-                <Form.Control name="quantita" type="number" min="0" required defaultValue={prodottoInModifica?.quantita ?? 0} />
-              </Form.Group>
-            )}
-
-            {!prodottoInModifica && isUnitaMultipla(unitaForm) && (
-              <Alert variant="warning" className="mb-0 py-2 small">
-                <i className="bi bi-info-circle me-1"></i>
-                Es. "1 confezione da 24 lattine" verrà salvata come 24 lattine. I tasti +/- lavorano sempre sulla singola unità, mai su una confezione intera.
-              </Alert>
-            )}
+            <Form.Group className="mb-3">
+              <Form.Label>{prodottoInModifica ? `Quantità attuale (${UNITA[unitaForm]})` : `Quantità iniziale (${UNITA[unitaForm]})`}</Form.Label>
+              <Form.Control name="quantita" type="number" min="0" required defaultValue={prodottoInModifica?.quantita ?? 0} />
+            </Form.Group>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={() => setShowFormModal(false)}>Annulla</Button>
@@ -496,19 +418,10 @@ function Magazzino({ user }) {
         {showRifornisci && (
           <Form onSubmit={handleRifornisci}>
             <Modal.Body>
-              {isUnitaMultipla(showRifornisci.unita) ? (
-                <Form.Group className="mb-2">
-                  <Form.Label>
-                    Quante confezioni da {showRifornisci.molteplicita} {showRifornisci.unita_contenuto} aggiungere?
-                  </Form.Label>
-                  <Form.Control name="num_confezioni" type="number" min="1" required defaultValue={1} autoFocus />
-                </Form.Group>
-              ) : (
-                <Form.Group className="mb-2">
-                  <Form.Label>Quante {UNITA_SINGOLE[showRifornisci.unita]?.toLowerCase()} aggiungere?</Form.Label>
-                  <Form.Control name="quantita_da_aggiungere" type="number" min="1" required defaultValue={1} autoFocus />
-                </Form.Group>
-              )}
+              <Form.Group className="mb-2">
+                <Form.Label>Quante {UNITA[showRifornisci.unita]?.toLowerCase()} aggiungere?</Form.Label>
+                <Form.Control name="quantita_da_aggiungere" type="number" min="1" required defaultValue={1} autoFocus />
+              </Form.Group>
               <div className="text-muted small">Scorta attuale: {showRifornisci.quantita} {unitaConteggio(showRifornisci)}</div>
             </Modal.Body>
             <Modal.Footer>

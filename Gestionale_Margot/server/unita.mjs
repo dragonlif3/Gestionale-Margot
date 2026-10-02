@@ -1,33 +1,25 @@
 /**
  * Unità di misura per i prodotti di magazzino.
- * "Singole": il prodotto si conta direttamente in quell'unità.
- * "Multiple": il prodotto viene acquistato in confezioni/scatole ma
- * viene tracciato in magazzino nell'unità reale contenuta (es. lattine),
- * quindi richiedono anche la molteplicità (es. 24 lattine a confezione).
+ *
+ * Tutte le unità sono "dirette": il prodotto si conta esattamente in
+ * quell'unità, sia che si tratti di una bottiglia o di una confezione.
+ * Una "Confezione" da 24 lattine si conta in confezioni (1, 2, 3...),
+ * si toglie una confezione intera quando è finita, e il prezzo è quello
+ * della confezione: niente più conversioni interne verso il contenuto.
  */
-export const UNITA_SINGOLE = {
+export const UNITA = {
   bottiglia: 'Bottiglia',
   box: 'Box',
   lattina: 'Lattina',
   fusto: 'Fusto',
-  bombola: 'Bombola'
-};
-
-export const UNITA_MULTIPLE = {
+  bombola: 'Bombola',
   confezione: 'Confezione',
   scatola: 'Scatola'
 };
 
-export const isUnitaSingola = (unita) => Object.prototype.hasOwnProperty.call(UNITA_SINGOLE, unita);
-export const isUnitaMultipla = (unita) => Object.prototype.hasOwnProperty.call(UNITA_MULTIPLE, unita);
-export const isUnitaValida = (unita) => isUnitaSingola(unita) || isUnitaMultipla(unita);
+export const isUnitaValida = (unita) => Object.prototype.hasOwnProperty.call(UNITA, unita);
 
-// Etichetta dell'unità con cui il prodotto viene davvero contato in magazzino:
-// per le unità multiple è il contenuto (es. "lattine"), altrimenti l'unità stessa.
-// Specchio di unitaConteggio() in unita.js lato frontend.
-export const unitaConteggioLabel = (prodotto) => {
-  if (isUnitaMultipla(prodotto.unita) && prodotto.unita_contenuto) {
-    return prodotto.unita_contenuto;
-  }
-  return UNITA_SINGOLE[prodotto.unita] || prodotto.unita;
-};
+// Etichetta dell'unità di un prodotto. Specchio di unitaConteggio() in
+// unita.js lato frontend (mantenuta con lo stesso nome per non dover
+// toccare i punti che già la usano, es. il log dei consumi).
+export const unitaConteggioLabel = (prodotto) => UNITA[prodotto.unita] || prodotto.unita;

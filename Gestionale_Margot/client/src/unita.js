@@ -1,24 +1,19 @@
 // Deve restare allineata a backend/unita.mjs.
-export const UNITA_SINGOLE = {
+//
+// Tutte le unità sono "dirette": il prodotto si conta esattamente in
+// quell'unità. Una "Confezione" da 24 lattine si conta in confezioni
+// (1, 2, 3...), il prezzo è quello della confezione, e quando è finita
+// si toglie 1 confezione intera - niente conversioni interne.
+export const UNITA = {
   bottiglia: 'Bottiglia',
   box: 'Box',
   lattina: 'Lattina',
   fusto: 'Fusto',
-  bombola: 'Bombola'
-};
-
-export const UNITA_MULTIPLE = {
+  bombola: 'Bombola',
   confezione: 'Confezione',
   scatola: 'Scatola'
 };
 
-export const isUnitaMultipla = (unita) => Object.prototype.hasOwnProperty.call(UNITA_MULTIPLE, unita);
-
-// Etichetta dell'unità "reale" con cui viene contato il prodotto in magazzino:
-// per le unità multiple è il contenuto (es. "lattine"), altrimenti l'unità stessa.
-export const unitaConteggio = (prodotto) => {
-  if (isUnitaMultipla(prodotto.unita) && prodotto.unita_contenuto) {
-    return prodotto.unita_contenuto;
-  }
-  return UNITA_SINGOLE[prodotto.unita] || prodotto.unita;
-};
+// Etichetta dell'unità di un prodotto (mantiene il nome storico
+// "unitaConteggio" per non dover toccare i punti che già la usano).
+export const unitaConteggio = (prodotto) => UNITA[prodotto.unita] || prodotto.unita;

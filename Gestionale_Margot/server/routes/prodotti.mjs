@@ -1,7 +1,7 @@
 import express from 'express';
 import { getAllProdotti, addProdotto, updateProdotto, updateQuantitaProdotto, deleteProdotto } from '../dao/dao_prodotti.mjs';
 import { isCategoriaValida, isSottocategoriaValida } from '../categorie.mjs';
-import { isUnitaValida, isUnitaMultipla } from '../unita.mjs';
+import { isUnitaValida } from '../unita.mjs';
 
 const router = express.Router();
 
@@ -21,7 +21,7 @@ const hasRole = (...ruoliAmmessi) => (req, res, next) => {
 // Valida il corpo di una richiesta di creazione/modifica prodotto.
 // Ritorna null se tutto ok, altrimenti un messaggio di errore.
 const validaProdotto = (body) => {
-  const { nome, prezzo, categoria, sottocategoria, unita, molteplicita } = body;
+  const { nome, prezzo, categoria, sottocategoria, unita } = body;
 
   if (!nome || String(nome).trim() === '') return 'Il nome è obbligatorio';
   if (prezzo === undefined || prezzo === null || isNaN(prezzo) || prezzo < 0) return 'Il prezzo non è valido';
@@ -35,12 +35,7 @@ const validaProdotto = (body) => {
     }
   }
 
-  if (!unita || !isUnitaValida(unita)) return "Unità non valida";
-  if (isUnitaMultipla(unita)) {
-    if (!molteplicita || isNaN(molteplicita) || molteplicita < 1) {
-      return "Per un'unità multipla (confezione/scatola) la molteplicità è obbligatoria (es. 24 lattine a confezione)";
-    }
-  }
+  if (!unita || !isUnitaValida(unita)) return 'Unità non valida';
 
   return null;
 };
@@ -66,7 +61,7 @@ router.post('/prodotti', hasRole('amministrazione', 'bar'), async (req, res) => 
   if (erroreValidazione) return res.status(400).json({ error: erroreValidazione });
 
   try {
-    const { nome, quantita, quantita_ottimale, prezzo, categoria, sottocategoria, unita, molteplicita, unita_contenuto } = req.body;
+    const { nome, quantita, quantita_ottimale, prezzo, categoria, sottocategoria, unita } = req.body;
 
     const nuovoProdotto = {
       nome,
@@ -75,9 +70,7 @@ router.post('/prodotti', hasRole('amministrazione', 'bar'), async (req, res) => 
       prezzo,
       categoria: categoria || null,
       sottocategoria: sottocategoria || null,
-      unita,
-      molteplicita: isUnitaMultipla(unita) ? molteplicita : null,
-      unita_contenuto: isUnitaMultipla(unita) ? unita_contenuto : null
+      unita
     };
 
     const result = await addProdotto(nuovoProdotto);
@@ -94,7 +87,7 @@ router.put('/prodotti/:id', hasRole('amministrazione', 'bar'), async (req, res) 
   if (erroreValidazione) return res.status(400).json({ error: erroreValidazione });
 
   try {
-    const { nome, quantita, quantita_ottimale, prezzo, categoria, sottocategoria, unita, molteplicita, unita_contenuto } = req.body;
+    const { nome, quantita, quantita_ottimale, prezzo, categoria, sottocategoria, unita } = req.body;
 
     if (quantita === undefined || isNaN(quantita) || quantita < 0) {
       return res.status(400).json({ error: 'Quantità non valida' });
@@ -107,9 +100,7 @@ router.put('/prodotti/:id', hasRole('amministrazione', 'bar'), async (req, res) 
       prezzo,
       categoria: categoria || null,
       sottocategoria: sottocategoria || null,
-      unita,
-      molteplicita: isUnitaMultipla(unita) ? molteplicita : null,
-      unita_contenuto: isUnitaMultipla(unita) ? unita_contenuto : null
+      unita
     };
 
     const result = await updateProdotto(req.params.id, prodottoAggiornato);

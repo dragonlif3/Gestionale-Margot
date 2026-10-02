@@ -138,3 +138,45 @@ export const generaReportConsumi = () => {
     });
   });
 };
+
+// ---------------------------------------------------------
+// STORICO DEI REPORT GENERATI
+// ---------------------------------------------------------
+// generaReportConsumi() sopra SVUOTA il log grezzo appena genera il
+// report: senza salvare da qualche parte il risultato, un semplice
+// refresh della pagina lo farebbe sparire per sempre. Queste funzioni
+// tengono una copia di ogni report generato, così resta consultabile
+// (oggi, domani, o tra una settimana) finché non se ne genera un altro.
+
+export const salvaReportGenerato = (report, utenteUsername) => {
+  return new Promise((resolve, reject) => {
+    const sql = 'INSERT INTO report_consumi (generato_da, dati) VALUES (?, ?)';
+    db.run(sql, [utenteUsername, JSON.stringify(report)], function (err) {
+      if (err) reject(err);
+      else resolve(this.lastID);
+    });
+  });
+};
+
+export const getUltimoReportGenerato = () => {
+  return new Promise((resolve, reject) => {
+    const sql = 'SELECT * FROM report_consumi ORDER BY generato_il DESC, id DESC LIMIT 1';
+    db.get(sql, [], (err, row) => {
+      if (err) return reject(err);
+      if (!row) return resolve(null);
+      resolve({ id: row.id, generato_il: row.generato_il, generato_da: row.generato_da, dati: JSON.parse(row.dati) });
+    });
+  });
+};
+
+// Gli ultimi N report generati (senza contare quello più recente, che
+// si vede già come "report attuale" - questa è la sezione "precedenti").
+export const getStoricoReport = (limite = 20) => {
+  return new Promise((resolve, reject) => {
+    const sql = 'SELECT * FROM report_consumi ORDER BY generato_il DESC, id DESC LIMIT ? OFFSET 1';
+    db.all(sql, [limite], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows.map((r) => ({ id: r.id, generato_il: r.generato_il, generato_da: r.generato_da, dati: JSON.parse(r.dati) })));
+    });
+  });
+};

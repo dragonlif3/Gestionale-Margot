@@ -8,11 +8,7 @@ export const getAllProdotti = () => {
   return new Promise((resolve, reject) => {
     const sql = `
       SELECT * FROM prodotti
-      ORDER BY
-        CASE WHEN categoria IS NULL THEN 1 ELSE 0 END,
-        categoria ASC,
-        sottocategoria ASC,
-        nome ASC
+      ORDER BY nome COLLATE NOCASE ASC
     `;
     db.all(sql, [], (err, rows) => {
       if (err) reject(err);
@@ -25,8 +21,8 @@ export const addProdotto = (prodotto) => {
   return new Promise((resolve, reject) => {
     const query = `
       INSERT INTO prodotti
-        (nome, quantita, quantita_ottimale, prezzo, categoria, sottocategoria, unita, molteplicita, unita_contenuto)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (nome, quantita, quantita_ottimale, prezzo, categoria, sottocategoria, unita)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
     const valori = [
       prodotto.nome,
@@ -35,9 +31,7 @@ export const addProdotto = (prodotto) => {
       prodotto.prezzo,
       prodotto.categoria,
       prodotto.sottocategoria,
-      prodotto.unita,
-      prodotto.molteplicita || null,
-      prodotto.unita_contenuto || null
+      prodotto.unita
     ];
 
     db.run(query, valori, function (err) {
@@ -59,9 +53,7 @@ export const updateProdotto = (id, prodotto) => {
         prezzo = ?,
         categoria = ?,
         sottocategoria = ?,
-        unita = ?,
-        molteplicita = ?,
-        unita_contenuto = ?
+        unita = ?
       WHERE id = ?
     `;
     const valori = [
@@ -72,8 +64,6 @@ export const updateProdotto = (id, prodotto) => {
       prodotto.categoria,
       prodotto.sottocategoria,
       prodotto.unita,
-      prodotto.molteplicita || null,
-      prodotto.unita_contenuto || null,
       id
     ];
 

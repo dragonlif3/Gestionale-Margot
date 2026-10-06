@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { inizializzaDatabase } from './db_init.mjs';
-import { getUser} from './dao/dao_utenti.mjs';
+import { getUser, getUserById } from './dao/dao_utenti.mjs';
 import prodottiRoutes from './routes/prodotti.mjs';
 import authRoutes from './routes/auth.mjs';
 import eventiRoutes from './routes/eventi.mjs';
@@ -65,7 +65,6 @@ app.use(session({
 }));
 
 app.use(passport.authenticate('session'));
-app.use(passport.session());
 
 passport.use(new LocalStrategy(async function verify(username, password, cb) {
   try {
@@ -82,11 +81,20 @@ passport.use(new LocalStrategy(async function verify(username, password, cb) {
 
 
 passport.serializeUser(function (user, cb) {
-  cb(null, user);
+  cb(null, user.id);
 });
 
-passport.deserializeUser(function (user, cb) {
-  return cb(null, user);
+passport.deserializeUser(async function (id, cb) {
+  try {
+    if (typeof id !== 'number') return cb(null, false);
+
+    const user = await getUserById(id);
+    if (user.error) return cb(null, false);
+
+    return cb(null, user);
+  } catch (err) {
+    return cb(err);
+  }
 });
 
 // 2. Diciamo a Express che tutte le rotte in prodottiRoutes 

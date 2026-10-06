@@ -59,7 +59,7 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     sameSite: 'lax', // Il browser ora lo accetta perché pensa che frontend e backend siano lo stesso sito
-    secure: false,   // Express spedirà il cookie a Vercel senza bloccarlo
+    secure: process.env.NODE_ENV === 'production', 
     maxAge: 1000 * 60 * 60 * 24 * 7
   }
 }));

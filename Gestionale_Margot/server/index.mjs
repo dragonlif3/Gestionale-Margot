@@ -17,6 +17,7 @@ import connectSqlite3 from 'connect-sqlite3';
 //init
 const app = express();
 const PORT = 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 const SQLiteStore = connectSqlite3(session);
 
 //middleware
@@ -105,7 +106,7 @@ app.use('/api', eventiRoutes);
 app.use('/api', consumiRoutes);
 app.use('/api', notificheRoutes);
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, HOST, () => {
   console.log(`API server started at http://localhost:${PORT}`);
   console.log('Raggiungibile anche da altri dispositivi in rete tramite l\'IP locale del PC, es. http://192.168.x.x:3000');
 });

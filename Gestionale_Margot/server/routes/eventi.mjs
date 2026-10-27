@@ -13,8 +13,9 @@ import {
   cancellaIscrizioneVolontario,
   getIscrittiEvento,
   getEventiIdIscrittoUtente,
-  getEventiIscrittoUtente
+  getEventiIscrittoUtente,
 } from '../dao/dao_eventi.mjs';
+import { avvisaIscrittiDiModifica } from '../notifiche_iscritti.mjs';
 
 const router = express.Router();
 
@@ -135,17 +136,26 @@ router.put('/eventi/:id', hasRole('eventi', 'amministrazione'), async (req, res)
   }
 
   try {
-    if (max_volontari !== undefined) {
-      const eventoAttuale = await getEventoById(req.params.id);
-      if (!eventoAttuale.error && max_volontari < eventoAttuale.iscritti_count) {
-        return res.status(400).json({
-          error: `Non puoi impostare un massimo inferiore agli iscritti già presenti (${eventoAttuale.iscritti_count})`
-        });
-      }
+    // Lo stato prima della modifica: serve per il controllo sul massimo
+    // e per capire se avvisare gli iscritti
+    const eventoAttuale = await getEventoById(req.params.id);
+
+    if (max_volontari !== undefined && !eventoAttuale.error && max_volontari < eventoAttuale.iscritti_count) {
+      return res.status(400).json({
+        error: `Non puoi impostare un massimo inferiore agli iscritti già presenti (${eventoAttuale.iscritti_count})`
+      });
     }
 
     const result = await updateEvento(req.params.id, { nome, tipo, costo, data_evento, max_volontari: max_volontari || 0 });
     if (result.error) return res.status(404).json(result);
+
+    // Se sono cambiati nome o data, avvisa i volontari iscritti. Parte "in disparte":
+    // un errore qui non deve far fallire la modifica, che è già avvenuta.
+    if (!eventoAttuale.error) {
+      avvisaIscrittiDiModifica(req.params.id, eventoAttuale, { nome, data_evento })
+        .catch((errAvviso) => console.error('Errore avvisando gli iscritti della modifica:', errAvviso));
+    }
+
     res.status(200).json({ message: 'Evento aggiornato con successo' });
   } catch (err) {
     console.error("Errore durante l'aggiornamento dell'evento:", err);

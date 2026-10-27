@@ -1,6 +1,7 @@
 import express from 'express';
 import passport from 'passport';
 import { createUser, getAllUtenti, updateUtente, resetPassword, deleteUtente, cambiaPropriaPassword } from '../dao/dao_utenti.mjs';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
@@ -24,11 +25,21 @@ const isLoggedIn = (req, res, next) => {
   }
 };
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 8,
+  skipSuccessfulRequests: true,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => String(req.body?.username ?? '').trim().toLowerCase(),
+  message: { error: 'Troppi tentativi di accesso. Riprova tra qualche minuto.' }
+});
+
 // ---------------------------------------------------------
 // ROTTE DI AUTENTICAZIONE
 // ---------------------------------------------------------
 
-router.post('/sessions', passport.authenticate('local'), function(req, res) {
+router.post('/sessions', loginLimiter, passport.authenticate('local'), function(req, res) {
   return res.status(201).json(req.user);
 });
 

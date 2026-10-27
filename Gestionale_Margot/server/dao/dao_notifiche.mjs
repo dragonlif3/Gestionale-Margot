@@ -1,16 +1,21 @@
 import db from './db.mjs';
+import { inviaPushAUtente } from '../push.mjs';
 
 // Notifiche personali "da leggere" per un utente - oggi generate solo
 // quando un evento a cui un Volontario era iscritto viene cancellato,
 // ma la tabella è generica: in futuro può ospitare altri tipi di avviso
 // senza bisogno di un'altra tabella.
 
-export const creaNotifica = (utenteId, messaggio) => {
+export const creaNotifica = (utenteId, messaggio, { titolo = 'Gestionale Cantina', url = '/' } = {}) => {
   return new Promise((resolve, reject) => {
     const sql = 'INSERT INTO notifiche_utente (utente_id, messaggio) VALUES (?, ?)';
-    db.run(sql, [utenteId, messaggio], (err) => {
-      if (err) reject(err);
-      else resolve(true);
+      db.run(sql, [utenteId, messaggio], (err) => {
+    if (err) return reject(err);
+    resolve(true);
+
+    // Oltre alla notifica nell'app, avvisa anche i dispositivi dell'utente
+    inviaPushAUtente(utenteId, { titolo: 'Margot', testo: messaggio, url: '/' })
+      .catch((errPush) => console.error('Push: errore inatteso:', errPush.message));
     });
   });
 };

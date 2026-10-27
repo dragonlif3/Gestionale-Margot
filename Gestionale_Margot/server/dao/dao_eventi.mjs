@@ -142,12 +142,14 @@ export const deleteEvento = (id) => {
 
                 if (iscritti.length === 0) return resolve(true);
 
-                const messaggio = `L'evento "${evento.nome}" del ${evento.data_evento} a cui eri iscritto è stato cancellato.`;
+                // "2026-12-04" -> "04/12/2026"
+                const dataLeggibile = `${evento.data_evento.slice(8, 10)}/${evento.data_evento.slice(5, 7)}/${evento.data_evento.slice(0, 4)}`;
+                const messaggio = `L'evento “${evento.nome}” del ${dataLeggibile} a cui eri iscritto è stato cancellato.`;
 
                 // L'evento è comunque già cancellato a questo punto: se la
                 // creazione di una notifica fallisse, lo logghiamo ma non
                 // facciamo fallire l'intera operazione per questo.
-                Promise.all(iscritti.map((i) => creaNotifica(i.utente_id, messaggio)))
+                Promise.all(iscritti.map((i) => creaNotifica(i.utente_id, messaggio, { titolo: 'Evento cancellato', url: '/miei-eventi' })))
                   .then(() => resolve(true))
                   .catch((errNotifiche) => {
                     console.error('Errore creando le notifiche ai volontari:', errNotifiche);

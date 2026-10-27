@@ -4,6 +4,10 @@ node_modules/
 # Database
 GM.db
 GM.db-*
+sessions.sqlite
+sessions.db
+*.db
+*.sqlite
 
 # Variabili d'ambiente (Backend e Frontend)
 .env

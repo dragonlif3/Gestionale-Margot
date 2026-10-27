@@ -23,6 +23,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        importScripts: ['push-sw.js'],
         // le chiamate API sempre "fresche" dalla rete, non cachate,
         // altrimenti vedresti quantità/vini non aggiornati offline
         runtimeCaching: [

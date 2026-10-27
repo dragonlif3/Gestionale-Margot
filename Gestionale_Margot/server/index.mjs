@@ -13,9 +13,15 @@ import session from 'express-session';
 import LocalStrategy from 'passport-local';
 import morgan from 'morgan';
 import connectSqlite3 from 'connect-sqlite3';
+import storicoRoutes from './routes/storico.mjs';
+import { tracciaModifiche } from './traccia_modifiche.mjs';
+import pushRoutes from './routes/push.mjs';
+import { avviaPuliziaStorico } from './pulizia_storico.mjs';
+import { avviaPromemoria } from './promemoria.mjs';
 
 //init
 const app = express();
+app.disable('x-powered-by');
 const PORT = 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const SQLiteStore = connectSqlite3(session);
@@ -29,6 +35,7 @@ app.use('/images', express.static('images'))
 // Origini ammesse: in .env puoi aggiungere ALLOWED_ORIGINS="http://192.168.1.23:5173,https://tuodominio.it"
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174',
   ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
 ];
 
@@ -100,13 +107,17 @@ passport.deserializeUser(async function (id, cb) {
 
 // 2. Diciamo a Express che tutte le rotte in prodottiRoutes 
 // avranno il prefisso "/api"
+app.use('/api', tracciaModifiche);
 app.use('/api', prodottiRoutes); 
 app.use('/api', authRoutes);
 app.use('/api', eventiRoutes);
 app.use('/api', consumiRoutes);
 app.use('/api', notificheRoutes);
+app.use('/api', storicoRoutes);
+app.use('/api', pushRoutes);
 
 app.listen(PORT, HOST, () => {
   console.log(`API server started at http://localhost:${PORT}`);
-  console.log('Raggiungibile anche da altri dispositivi in rete tramite l\'IP locale del PC, es. http://192.168.x.x:3000');
+  avviaPuliziaStorico();
+  avviaPromemoria();
 });

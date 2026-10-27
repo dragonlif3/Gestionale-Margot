@@ -14,6 +14,7 @@ import { MieiEventi } from './components/MieiEventiComp';
 import { GestionePersonale } from './components/GestionePersonaleComp';
 import { Dashboard } from './components/DashboardComp';
 import NotFound from './components/NotFound';
+import { Storico } from './components/StoricoComp';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -37,7 +38,11 @@ export default function App() {
       credentials: 'include',
       body: JSON.stringify(credentials)
     });
-    if (!res.ok) throw new Error('Login fallito');
+    if (!res.ok) {
+      const err = new Error('Login fallito');
+      err.status = res.status;
+      throw err;
+    }
     const userData = await res.json();
     setUser(userData);
   };
@@ -144,7 +149,15 @@ export default function App() {
               : <Navigate to="/calendario" />
           } 
         />
-
+        {/* Rotta Storico: solo Amministrazione */}
+        <Route
+          path="/storico"
+          element={
+            !user ? <Navigate to="/login" />
+              : user.ruolo === 'amministrazione' ? <Storico />
+              : <Navigate to="/calendario" />
+          }
+        />
         {/* Qualsiasi altra rotta: pagina 404 */}
         <Route path="*" element={<NotFound />} />
 

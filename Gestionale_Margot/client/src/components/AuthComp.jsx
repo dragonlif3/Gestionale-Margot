@@ -17,8 +17,11 @@ function LoginForm(props) {
       await props.handleLogin(credentials);
       return { success: true };
     } catch (error) {
-      return { error: 'Login fallito. Controlla le tue credenziali.' };
-    }
+        if (error.status === 429) {
+          return { error: 'Troppi tentativi di accesso. Riprova tra qualche minuto.' };
+        }
+        return { error: 'Login fallito. Controlla le tue credenziali.' };
+      }
   }
 
   return (

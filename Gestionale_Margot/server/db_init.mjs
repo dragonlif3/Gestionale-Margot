@@ -138,6 +138,48 @@ const TABELLE = [
         dati TEXT NOT NULL
       )
     `
+  },
+  {
+    nome: 'storico_modifiche',
+    sql: `
+      CREATE TABLE IF NOT EXISTS storico_modifiche (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        creato_il TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        utente_username TEXT NOT NULL,
+        azione TEXT NOT NULL,
+        entita TEXT NOT NULL,
+        entita_id INTEGER,
+        entita_nome TEXT,
+        dettagli TEXT
+      )
+    `
+  },
+  {
+    nome: 'push_iscrizioni',
+    sql: `
+      CREATE TABLE IF NOT EXISTS push_iscrizioni (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        utente_id INTEGER NOT NULL,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        creato_il TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+      )
+    `
+  },
+  {
+    nome: 'promemoria_inviati',
+    sql: `
+      CREATE TABLE IF NOT EXISTS promemoria_inviati (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tipo TEXT NOT NULL,
+        riferimento_id INTEGER NOT NULL,
+        soglia TEXT NOT NULL,
+        scadenza TEXT NOT NULL,
+        inviato_il TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        UNIQUE (tipo, riferimento_id, soglia, scadenza)
+      )
+    `
   }
 ];
 

@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import { API_URL } from '../config';
 import { formatDataOraIT } from '../dateUtils';
 import '../App.css';
+import NotifichePushVoce from './NotifichePushVoce';
+import { sincronizzaPush } from '../push';
 
 function NavHeader(props) {
   const [showCambiaPassword, setShowCambiaPassword] = useState(false);
@@ -17,6 +19,9 @@ function NavHeader(props) {
   const [showNotifiche, setShowNotifiche] = useState(false);
 
   const puoAvereNotifiche = props.loggedIn && props.user?.ruolo === 'volontari';
+  useEffect(() => {
+      if (props.loggedIn) sincronizzaPush();
+    }, [props.loggedIn]);
 
   const fetchConteggioNotifiche = () => {
     fetch(`${API_URL}/api/notifiche/conteggio`, { credentials: 'include' })
@@ -165,7 +170,13 @@ function NavHeader(props) {
                 Personale
               </Nav.Link>
             )}
-
+            {/* Link a Storico (solo Amministrazione) */}
+            {props.loggedIn && props.user?.ruolo === 'amministrazione' && (
+              <Nav.Link as={Link} to="/storico" className="navbar-link me-3">
+                <i className="bi bi-clock-history me-1"></i>
+                Storico
+              </Nav.Link>
+            )}
             {/* Campanellino notifiche (solo Volontari, per ora) */}
             {puoAvereNotifiche && (
               <Nav.Link onClick={apriNotifiche} className="navbar-link me-3 position-relative" role="button">
@@ -188,6 +199,7 @@ function NavHeader(props) {
                 <NavDropdown.Item onClick={() => setShowCambiaPassword(true)}>
                   <i className="bi bi-key me-2"></i>Cambia password
                 </NavDropdown.Item>
+                <NotifichePushVoce />
                 <NavDropdown.Divider />
                 <NavDropdown.Item onClick={props.handleLogout} className="text-danger">
                   <i className="bi bi-box-arrow-right me-2"></i>Logout

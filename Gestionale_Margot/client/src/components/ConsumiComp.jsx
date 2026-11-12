@@ -1,17 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Table, Button, Row, Col, Alert, Spinner, Badge, ListGroup } from 'react-bootstrap';
-import { API_URL } from '../config';
-import { categoriaLabel, sottocategoriaLabel } from '../categorie';
-import { formatDataOraIT } from '../dateUtils';
+import { useState, useEffect } from 'react';
+import { Container, Row, Col, Alert, Spinner } from 'react-bootstrap';
+import CardPendenti from './consumi/CardPendenti';
+import ReportCorrente from './consumi/ReportCorrente';
+import StoricoReport from './consumi/StoricoReport';
+import { caricaPendenti, caricaUltimoReport, generaReport, caricaStoricoReport } from './consumi/api';
+import { creaCsvConsumi, nomeFileCsv } from './consumi/consumiUtils';
+import './consumi/consumi.css';
 
+// Il "regista" della pagina Consumi: tiene lo stato e decide cosa fare quando l'utente agisce.
+// Come appare ogni parte è nei componenti della cartella consumi/.
 function Consumi() {
   const [pendenti, setPendenti] = useState(null);
   const [loadingPendenti, setLoadingPendenti] = useState(true);
   const [generando, setGenerando] = useState(false);
 
-  // Il report mostrato nella tabella principale: può essere l'ultimo
-  // generato (caricato da solo all'apertura della pagina, sopravvive
-  // a un refresh) oppure uno più vecchio scelto dallo storico qui sotto.
+  // Il report mostrato in pagina: può essere l'ultimo generato (caricato da solo
+  // all'apertura, sopravvive a un refresh) oppure uno più vecchio scelto dall'elenco.
   const [reportVisualizzato, setReportVisualizzato] = useState(null); // { dati, generato_il, generato_da } | null
   const [caricamentoIniziale, setCaricamentoIniziale] = useState(true);
 
@@ -23,9 +27,7 @@ function Consumi() {
 
   const fetchPendenti = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/consumi/pendenti`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Errore nel controllo dei consumi in attesa');
-      const data = await response.json();
+      const data = await caricaPendenti();
       setPendenti(data.numero);
     } catch (err) {
       setError(err.message);
@@ -36,14 +38,23 @@ function Consumi() {
 
   const fetchUltimoReport = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/consumi/report/ultimo`, { credentials: 'include' });
-      if (!response.ok) throw new Error("Errore nel caricamento dell'ultimo report");
-      const data = await response.json();
+      const data = await caricaUltimoReport();
       if (data) setReportVisualizzato(data);
     } catch (err) {
       setError(err.message);
     } finally {
       setCaricamentoIniziale(false);
+    }
+  };
+
+  const fetchStorico = async () => {
+    setLoadingStorico(true);
+    try {
+      setStorico(await caricaStoricoReport());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingStorico(false);
     }
   };
 
@@ -61,12 +72,7 @@ function Consumi() {
     setGenerando(true);
     setError(null);
     try {
-      const response = await fetch(`${API_URL}/api/consumi/report`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Errore nella generazione del report');
-      const dati = await response.json();
+      const dati = await generaReport();
       setReportVisualizzato({ dati, generato_il: new Date().toISOString(), generato_da: null });
       fetchPendenti();
       if (mostraStorico) fetchStorico(); // il report appena rimpiazzato dall'ultimo entra nello storico
@@ -74,20 +80,6 @@ function Consumi() {
       setError(err.message);
     } finally {
       setGenerando(false);
-    }
-  };
-
-  const fetchStorico = async () => {
-    setLoadingStorico(true);
-    try {
-      const response = await fetch(`${API_URL}/api/consumi/report/storico`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Errore nel caricamento dello storico');
-      const data = await response.json();
-      setStorico(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoadingStorico(false);
     }
   };
 
@@ -100,26 +92,12 @@ function Consumi() {
   const scaricaCsv = () => {
     const dati = reportVisualizzato?.dati;
     if (!dati || dati.length === 0) return;
-    const intestazione = ['Categoria', 'Sottocategoria', 'Nome', 'Quantità consumata', 'Unità', 'Movimenti', 'Dal', 'Al'];
-    const righe = dati.map((r) => [
-      categoriaLabel(r.categoria),
-      r.categoria ? sottocategoriaLabel(r.categoria, r.sottocategoria) : '—',
-      r.nome,
-      r.quantita_totale,
-      r.unita_label,
-      r.movimenti,
-      formatDataOraIT(r.dal),
-      formatDataOraIT(r.al)
-    ]);
-    const csv = [intestazione, ...righe]
-      .map((riga) => riga.map((cella) => `"${String(cella).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
 
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + creaCsvConsumi(dati)], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `consumi_margot_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = nomeFileCsv(new Date());
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -133,8 +111,8 @@ function Consumi() {
   }
 
   return (
-    <Container className="mt-4 mb-5">
-      <Row className="mb-3">
+    <Container className="mt-4 mb-5 con-pagina">
+      <Row className="mb-1">
         <Col>
           <h2 className="text-warning">
             <i className="bi bi-graph-down-arrow"></i> Consumi
@@ -146,28 +124,9 @@ function Consumi() {
         </Col>
       </Row>
 
-      {error && <Alert variant="danger">{error}</Alert>}
+      {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
 
-      <div className="p-4 mb-4 bg-white shadow-sm rounded d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div>
-          {loadingPendenti ? (
-            <Spinner animation="border" size="sm" variant="warning" />
-          ) : (
-            <>
-              <Badge bg={pendenti > 0 ? 'warning' : 'secondary'} text={pendenti > 0 ? 'dark' : undefined} className="fs-6 me-2">
-                {pendenti}
-              </Badge>
-              <span className="text-muted">
-                {pendenti === 0 ? 'nessun movimento in attesa' : `movimento${pendenti === 1 ? '' : 'i'} in attesa dall'ultimo report`}
-              </span>
-            </>
-          )}
-        </div>
-        <Button variant="warning" onClick={handleGeneraReport} disabled={generando || pendenti === 0}>
-          {generando ? <Spinner animation="border" size="sm" className="me-2" /> : <i className="bi bi-clipboard-data me-1"></i>}
-          Dammi i consumi
-        </Button>
-      </div>
+      <CardPendenti pendenti={pendenti} caricamento={loadingPendenti} generando={generando} onGenera={handleGeneraReport} />
 
       {reportVisualizzato === null ? (
         <Alert variant="warning">
@@ -175,94 +134,17 @@ function Consumi() {
           Non hai ancora generato nessun report di consumi.
         </Alert>
       ) : (
-        <>
-          <Row className="mb-2 align-items-center">
-            <Col>
-              <h5 className="mb-0">
-                Report del {formatDataOraIT(reportVisualizzato.generato_il)}
-                {reportVisualizzato.generato_da && (
-                  <span className="text-muted fw-normal"> — generato da {reportVisualizzato.generato_da}</span>
-                )}
-              </h5>
-            </Col>
-            <Col xs="auto">
-              <Button variant="outline-warning" size="sm" onClick={scaricaCsv} disabled={reportVisualizzato.dati.length === 0}>
-                <i className="bi bi-filetype-csv me-1"></i> Scarica CSV
-              </Button>
-            </Col>
-          </Row>
-
-          {reportVisualizzato.dati.length === 0 ? (
-            <Alert variant="success">
-              <i className="bi bi-check-circle me-2"></i>
-              Nessun consumo registrato in questo report.
-            </Alert>
-          ) : (
-            <Table striped bordered hover responsive className="bg-white shadow-sm align-middle">
-              <thead className="table-dark">
-                <tr>
-                  <th>Categoria</th>
-                  <th>Sottocategoria</th>
-                  <th>Nome</th>
-                  <th className="text-center">Consumato</th>
-                  <th className="text-center">Movimenti</th>
-                  <th>Dal</th>
-                  <th>Al</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportVisualizzato.dati.map((r) => (
-                  <tr key={r.prodotto_id ?? r.nome}>
-                    <td>{categoriaLabel(r.categoria)}</td>
-                    <td>{r.categoria ? sottocategoriaLabel(r.categoria, r.sottocategoria) : '—'}</td>
-                    <td className="fw-bold">{r.nome}</td>
-                    <td className="text-center">
-                      <Badge bg="danger">{r.quantita_totale} {r.unita_label}</Badge>
-                    </td>
-                    <td className="text-center">{r.movimenti}</td>
-                    <td>{formatDataOraIT(r.dal)}</td>
-                    <td>{formatDataOraIT(r.al)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </>
+        <ReportCorrente report={reportVisualizzato} onScaricaCsv={scaricaCsv} />
       )}
 
-      <div className="mt-4">
-        <Button variant="link" className="p-0" onClick={toggleStorico}>
-          <i className={`bi bi-chevron-${mostraStorico ? 'down' : 'right'} me-1`}></i>
-          Report precedenti
-        </Button>
-
-        {mostraStorico && (
-          <div className="mt-2">
-            {loadingStorico ? (
-              <Spinner animation="border" size="sm" variant="warning" />
-            ) : storico.length === 0 ? (
-              <p className="text-muted small mb-0">Nessun report precedente.</p>
-            ) : (
-              <ListGroup>
-                {storico.map((r) => (
-                  <ListGroup.Item
-                    key={r.id}
-                    action
-                    onClick={() => setReportVisualizzato(r)}
-                    className="d-flex justify-content-between align-items-center"
-                  >
-                    <span>
-                      {formatDataOraIT(r.generato_il)}
-                      {r.generato_da && <span className="text-muted"> — {r.generato_da}</span>}
-                    </span>
-                    <Badge bg="secondary">{r.dati.length} prodott{r.dati.length === 1 ? 'o' : 'i'}</Badge>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
-            )}
-          </div>
-        )}
-      </div>
+      <StoricoReport
+        aperto={mostraStorico}
+        onToggle={toggleStorico}
+        caricamento={loadingStorico}
+        report={storico}
+        selezionatoId={reportVisualizzato?.id}
+        onSeleziona={setReportVisualizzato}
+      />
     </Container>
   );
 }

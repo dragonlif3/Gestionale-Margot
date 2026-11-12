@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Table, Button, Row, Col, Alert, Spinner, Badge } from 'react-bootstrap';
-import { API_URL } from '../config';
-import { formatDataIT } from '../dateUtils';
+import { useState, useEffect } from 'react';
+import { Container, Row, Col, Alert, Spinner } from 'react-bootstrap';
+import SchedaMioEvento from './mieieventi/SchedaMioEvento';
+import { chiama } from '../apiClient';
+import { annullaIscrizione } from './calendario/api';
+import './mieieventi/mieieventi.css';
 
+// Gli eventi a cui il volontario si è iscritto. Come appare ogni evento è in mieieventi/SchedaMioEvento.jsx.
 function MieiEventi() {
   const [eventi, setEventi] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,10 +13,8 @@ function MieiEventi() {
 
   const fetchMieiEventi = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/eventi/miei`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Errore nel caricamento dei tuoi eventi');
-      const data = await response.json();
-      setEventi(data);
+      const risposta = await chiama('/api/eventi/miei', { erroreDefault: 'Errore nel caricamento dei tuoi eventi' });
+      setEventi(await risposta.json());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -28,11 +29,7 @@ function MieiEventi() {
   const handleCancellaIscrizione = async (id) => {
     if (!window.confirm('Vuoi annullare la tua iscrizione a questo evento?')) return;
     try {
-      const response = await fetch(`${API_URL}/api/eventi/${id}/iscrizione`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error("Errore durante l'annullamento");
+      await annullaIscrizione(id);   // se il server spiega perché non si può, mostriamo il suo messaggio
       fetchMieiEventi();
     } catch (err) {
       alert(err.message);
@@ -59,7 +56,7 @@ function MieiEventi() {
   }
 
   return (
-    <Container className="mt-4 mb-5">
+    <Container className="mt-4 mb-5 mie-pagina">
       <Row className="mb-3">
         <Col>
           <h2 className="text-warning">
@@ -75,40 +72,11 @@ function MieiEventi() {
           Non sei ancora iscritto a nessun evento. Vai sul Calendario per vedere quali cercano volontari.
         </Alert>
       ) : (
-        <Table striped bordered hover responsive className="bg-white shadow-sm align-middle">
-          <thead className="table-dark">
-            <tr>
-              <th>Evento</th>
-              <th>Tipo</th>
-              <th>Data</th>
-              <th className="text-center">Stato</th>
-              <th className="text-center">Azioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            {eventi.map((ev) => (
-              <tr key={ev.id}>
-                <td className="fw-bold">{ev.nome}</td>
-                <td>{ev.tipo}</td>
-                <td>{formatDataIT(ev.data_evento)}</td>
-                <td className="text-center">
-                  {eventoPassato(ev.data_evento) ? (
-                    <Badge bg="secondary">Concluso</Badge>
-                  ) : (
-                    <Badge bg="success">In programma</Badge>
-                  )}
-                </td>
-                <td className="text-center">
-                  {!eventoPassato(ev.data_evento) && (
-                    <Button size="sm" variant="outline-danger" onClick={() => handleCancellaIscrizione(ev.id)}>
-                      <i className="bi bi-x-circle me-1"></i> Annulla iscrizione
-                    </Button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+        <ul className="mie-lista">
+          {eventi.map((ev) => (
+            <SchedaMioEvento key={ev.id} evento={ev} passato={eventoPassato(ev.data_evento)} onAnnulla={handleCancellaIscrizione} />
+          ))}
+        </ul>
       )}
     </Container>
   );

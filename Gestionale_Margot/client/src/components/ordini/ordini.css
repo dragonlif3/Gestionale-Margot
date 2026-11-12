@@ -1,0 +1,46 @@
+/* ============================================================
+   COSA ORDINARE — stile Margot
+   Schede per categoria con la quantità da ordinare modificabile (− / numero / +),
+   un riepilogo con il totale in alto e, per la carta, una tabella separata.
+   ============================================================ */
+
+.ord-pagina { padding-bottom: 40px; }
+.ord-azioni { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* riepilogo */
+.ord-riepilogo { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--ink); color: #fff; border-radius: 28px; padding: 18px 22px; margin: 16px 0 22px; }
+.ord-riepilogo small { display: block; font: 700 12px var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .85); }
+.ord-riepilogo-totale { font: 400 42px/1.05 var(--font-heading); }
+.ord-riepilogo-n { text-align: right; font: 700 15px var(--font-body); }
+
+/* categorie */
+.ord-sezione { margin-bottom: 26px; }
+.ord-sezione-testa { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.ord-cat { display: inline-block; margin: 0; padding: 6px 18px; border-radius: 999px; font: 400 22px/1.15 var(--font-heading); text-transform: uppercase; letter-spacing: .03em; color: var(--ink); background: var(--lilac); }
+.ord-cat--arancio { background: var(--orange); }
+.ord-cat--sole { background: var(--sun); }
+.ord-cat--magenta { background: var(--magenta); color: #fff; }
+.ord-cat--verde { background: var(--teal); }
+.ord-cat--lime { background: var(--lime); }
+.ord-sub { font: 600 14px var(--font-body); color: var(--ink-soft); }
+.ord-sub b { color: var(--ink); }
+.ord-sottocat { margin: 14px 0 6px; font: 700 12px var(--font-body); color: var(--ink-soft); text-transform: uppercase; letter-spacing: .08em; }
+
+/* righe */
+.ord-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.ord-riga { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 14px; align-items: center; background: #fff; border-radius: 22px; padding: 14px 14px 14px 18px; box-shadow: var(--shadow-sm); }
+.ord-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ord-nome { font-size: 17px; overflow-wrap: anywhere; }
+.ord-meta { font: 600 13px var(--font-body); color: var(--ink-soft); }
+.ord-meta b { color: var(--ink); }
+.ord-qta { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ord-qta small { font: 600 11px var(--font-body); color: var(--ink-soft); }
+.ord-stepper { display: flex; align-items: center; gap: 6px; }
+.ord-input { width: 70px; text-align: center; font: 700 20px var(--font-body); min-height: 46px; padding: 0 4px; }
+.ord-pm { width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--ink); background: #fff; color: var(--ink); display: grid; place-items: center; font-size: 18px; flex: none; }
+.ord-pm:hover:not(:disabled) { background: var(--ink); color: #fff; }
+.ord-pm:disabled { opacity: .35; }
+
+@media (min-width: 1200px) {
+  .ord-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+}

@@ -9,18 +9,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png'],
       manifest: {
-        name: 'Gestionale Cantina',
-        short_name: 'Cantina',
-        description: 'Gestione magazzino vini',
-        theme_color: '#7f1934',   // rosso vino, coerente col resto
-        background_color: '#260810',
-        display: 'standalone',
-        start_url: '/',
-        icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
-        ]
+        name: 'Gestionale Margot', 
+        short_name: 'Margot', 
+        description: 'Gestionale del Circolo Arci Margot', 
+        theme_color: '#1B1230', 
+        background_color: '#FFF9F0'
       },
       workbox: {
         importScripts: ['push-sw.js'],
@@ -31,8 +24,21 @@ export default defineConfig({
             urlPattern: ({ url }) => url.pathname.startsWith('/api'),
             handler: 'NetworkOnly'
           }
-        ]
+        ],
+        globPatterns: ['**/*.{js,css,html,woff2,png,svg}'],
       }
     })
-  ]
+  ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      },
+      '/images': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      }
+    }
+  }
 })

@@ -1,46 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Container, Table, Button, Row, Col, Alert, Spinner,
-  Modal, Form, Badge
-} from 'react-bootstrap';
-import { API_URL } from '../config';
-import { RUOLI, RUOLI_LABEL } from '../roles';
+import { useState, useEffect, useRef } from 'react';
+import { Container, Button, Row, Col, Alert, Spinner } from 'react-bootstrap';
+import RigaPersonale from './personale/RigaPersonale';
+import { ModaleNuovo, ModaleModifica, ModalePassword } from './personale/ModaliPersonale';
+import { caricaPersonale, creaMembro, modificaMembro, reimpostaPassword, eliminaMembro } from './personale/api';
+import './personale/personale.css';
 
-const BADGE_RUOLO = {
-  amministrazione: 'danger',
-  bar: 'warning',
-  eventi: 'primary',
-  grafica: 'info',
-  volontari: 'secondary'
-};
-
+// Il "regista" della pagina: tiene lo stato e decide cosa fare quando l'utente agisce.
+// Come appare ogni parte è nei componenti della cartella personale/.
 function GestionePersonale({ utenteCorrente }) {
   const [personale, setPersonale] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successo, setSuccesso] = useState(null);
 
-  // Modal modifica
-  const [showModifica, setShowModifica] = useState(false);
   const [utenteInModifica, setUtenteInModifica] = useState(null);
-
-  // Modal reset password
-  const [showPassword, setShowPassword] = useState(false);
+  const [showModifica, setShowModifica] = useState(false);
   const [utentePassword, setUtentePassword] = useState(null);
-
-  // Modal nuovo membro
+  const [showPassword, setShowPassword] = useState(false);
   const [showNuovo, setShowNuovo] = useState(false);
 
+  // Il messaggio di successo sparisce da solo dopo 4 secondi; se ne arriva un altro nel frattempo,
+  // il conto alla rovescia riparte (altrimenti il primo cancellerebbe subito il secondo).
+  const timer = useRef(null);
   const mostraSuccesso = (msg) => {
+    clearTimeout(timer.current);
     setSuccesso(msg);
-    setTimeout(() => setSuccesso(null), 4000);
+    timer.current = setTimeout(() => setSuccesso(null), 4000);
   };
+  useEffect(() => () => clearTimeout(timer.current), []);
 
   const fetchPersonale = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/personale`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Errore nel caricamento del personale');
-      setPersonale(await res.json());
+      setPersonale(await caricaPersonale());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -50,77 +41,40 @@ function GestionePersonale({ utenteCorrente }) {
 
   useEffect(() => { fetchPersonale(); }, []);
 
-  const handleNuovo = async (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const body = { username: fd.get('username'), password: fd.get('password'), ruolo: fd.get('ruolo') };
-
+  // Ognuna di queste restituisce true se è andata bene, così la finestra può svuotare il modulo
+  const handleNuovo = async (corpo) => {
     try {
-      const res = await fetch(`${API_URL}/api/personale`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await creaMembro(corpo);
       setShowNuovo(false);
-      e.target.reset();
       fetchPersonale();
       mostraSuccesso(data.message);
-    } catch (err) { alert(err.message); }
+      return true;
+    } catch (err) { alert(err.message); return false; }
   };
 
-  const handleModifica = async (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const body = { username: fd.get('username'), ruolo: fd.get('ruolo') };
-
+  const handleModifica = async (corpo) => {
     try {
-      const res = await fetch(`${API_URL}/api/personale/${utenteInModifica.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await modificaMembro(utenteInModifica.id, corpo);
       setShowModifica(false);
       fetchPersonale();
       mostraSuccesso(data.message);
-    } catch (err) { alert(err.message); }
+      return true;
+    } catch (err) { alert(err.message); return false; }
   };
 
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const body = { password: fd.get('password') };
-
+  const handleResetPassword = async (password) => {
     try {
-      const res = await fetch(`${API_URL}/api/personale/${utentePassword.id}/password`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      await reimpostaPassword(utentePassword.id, password);
       setShowPassword(false);
-      e.target.reset();
       mostraSuccesso(`Password di "${utentePassword.username}" aggiornata.`);
-    } catch (err) { alert(err.message); }
+      return true;
+    } catch (err) { alert(err.message); return false; }
   };
 
   const handleElimina = async (utente) => {
     if (!window.confirm(`Sei sicuro di voler eliminare l'account di "${utente.username}"? L'operazione non è reversibile.`)) return;
-
     try {
-      const res = await fetch(`${API_URL}/api/personale/${utente.id}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await eliminaMembro(utente.id);
       fetchPersonale();
       mostraSuccesso(data.message);
     } catch (err) { alert(err.message); }
@@ -136,7 +90,7 @@ function GestionePersonale({ utenteCorrente }) {
   }
 
   return (
-    <Container className="mt-4 mb-5">
+    <Container className="mt-4 mb-5 per-pagina">
       <Row className="mb-3 align-items-center">
         <Col>
           <h2 className="text-warning">
@@ -145,160 +99,35 @@ function GestionePersonale({ utenteCorrente }) {
           <p className="text-muted mb-0">{personale.length} account registrati</p>
         </Col>
         <Col xs="auto">
-          <Button variant="success" onClick={() => setShowNuovo(true)}>
+          <Button variant="warning" onClick={() => setShowNuovo(true)}>
             <i className="bi bi-person-plus me-1"></i> Nuovo membro
           </Button>
         </Col>
       </Row>
 
       {error && <Alert variant="danger">{error}</Alert>}
-      {successo && <Alert variant="success"><i className="bi bi-check-circle me-2"></i>{successo}</Alert>}
+      {successo && <Alert variant="success" role="status"><i className="bi bi-check-circle me-2"></i>{successo}</Alert>}
 
-      <Table striped bordered hover responsive className="bg-white shadow-sm align-middle">
-        <thead className="table-dark">
-          <tr>
-            <th>Username</th>
-            <th>Ruolo</th>
-            <th className="text-center">Azioni</th>
-          </tr>
-        </thead>
-        <tbody>
-          {personale.length === 0 ? (
-            <tr><td colSpan="3" className="text-center py-4 text-muted">Nessun utente trovato.</td></tr>
-          ) : (
-            personale.map((u) => (
-              <tr key={u.id}>
-                <td className="fw-bold">
-                  {u.username}
-                  {u.id === utenteCorrente?.id && (
-                    <Badge bg="secondary" className="ms-2 small">tu</Badge>
-                  )}
-                </td>
-                <td>
-                  <Badge bg={BADGE_RUOLO[u.ruolo] || 'secondary'}>
-                    {RUOLI_LABEL[u.ruolo] || u.ruolo}
-                  </Badge>
-                </td>
-                <td className="text-center text-nowrap">
-                  <Button
-                    size="sm"
-                    variant="outline-warning"
-                    className="me-1"
-                    onClick={() => { setUtenteInModifica(u); setShowModifica(true); }}
-                    title="Modifica username / ruolo"
-                  >
-                    <i className="bi bi-pencil"></i>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline-primary"
-                    className="me-1"
-                    onClick={() => { setUtentePassword(u); setShowPassword(true); }}
-                    title="Reimposta password"
-                  >
-                    <i className="bi bi-key"></i>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    disabled={u.id === utenteCorrente?.id}
-                    onClick={() => handleElimina(u)}
-                    title={u.id === utenteCorrente?.id ? 'Non puoi eliminare te stesso' : 'Elimina account'}
-                  >
-                    <i className="bi bi-trash3"></i>
-                  </Button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </Table>
+      {personale.length === 0 ? (
+        <p className="per-vuoto">Nessun utente trovato.</p>
+      ) : (
+        <ul className="per-lista">
+          {personale.map((u) => (
+            <RigaPersonale
+              key={u.id}
+              utente={u}
+              sonoIo={u.id === utenteCorrente?.id}
+              onModifica={(x) => { setUtenteInModifica(x); setShowModifica(true); }}
+              onPassword={(x) => { setUtentePassword(x); setShowPassword(true); }}
+              onElimina={handleElimina}
+            />
+          ))}
+        </ul>
+      )}
 
-      {/* MODAL: Nuovo membro */}
-      <Modal show={showNuovo} onHide={() => setShowNuovo(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title><i className="bi bi-person-plus me-2"></i>Nuovo membro del personale</Modal.Title>
-        </Modal.Header>
-        <Form onSubmit={handleNuovo}>
-          <Modal.Body>
-            <Form.Group className="mb-3">
-              <Form.Label>Username</Form.Label>
-              <Form.Control name="username" type="text" required minLength={2} placeholder="Es. mario_rossi" />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Password provvisoria</Form.Label>
-              <Form.Control name="password" type="password" required minLength={6} placeholder="Minimo 6 caratteri" />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Ruolo</Form.Label>
-              <Form.Select name="ruolo" required defaultValue="">
-                <option value="" disabled>Seleziona un ruolo...</option>
-                {RUOLI.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowNuovo(false)}>Annulla</Button>
-            <Button variant="success" type="submit">Crea account</Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
-
-      {/* MODAL: Modifica username / ruolo */}
-      <Modal show={showModifica} onHide={() => setShowModifica(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title><i className="bi bi-pencil me-2"></i>Modifica "{utenteInModifica?.username}"</Modal.Title>
-        </Modal.Header>
-        {utenteInModifica && (
-          <Form onSubmit={handleModifica}>
-            <Modal.Body>
-              <Form.Group className="mb-3">
-                <Form.Label>Username</Form.Label>
-                <Form.Control name="username" type="text" required minLength={2} defaultValue={utenteInModifica.username} />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Ruolo</Form.Label>
-                <Form.Select name="ruolo" required defaultValue={utenteInModifica.ruolo}>
-                  {RUOLI.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </Form.Select>
-                {utenteInModifica.id === utenteCorrente?.id && (
-                  <Form.Text className="text-danger">Non puoi cambiare il tuo stesso ruolo.</Form.Text>
-                )}
-              </Form.Group>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowModifica(false)}>Annulla</Button>
-              <Button variant="warning" type="submit">Salva modifiche</Button>
-            </Modal.Footer>
-          </Form>
-        )}
-      </Modal>
-
-      {/* MODAL: Reset password */}
-      <Modal show={showPassword} onHide={() => setShowPassword(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title><i className="bi bi-key me-2"></i>Reimposta password di "{utentePassword?.username}"</Modal.Title>
-        </Modal.Header>
-        <Form onSubmit={handleResetPassword}>
-          <Modal.Body>
-            <Alert variant="warning" className="small">
-              Comunica la nuova password direttamente all'utente — non viene inviata per email.
-            </Alert>
-            <Form.Group className="mb-3">
-              <Form.Label>Nuova password</Form.Label>
-              <Form.Control name="password" type="password" required minLength={6} placeholder="Minimo 6 caratteri" autoFocus />
-            </Form.Group>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowPassword(false)}>Annulla</Button>
-            <Button variant="primary" type="submit">Imposta password</Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
+      <ModaleNuovo show={showNuovo} onHide={() => setShowNuovo(false)} onSalva={handleNuovo} />
+      <ModaleModifica show={showModifica} onHide={() => setShowModifica(false)} utente={utenteInModifica} sonoIo={utenteInModifica?.id === utenteCorrente?.id} onSalva={handleModifica} />
+      <ModalePassword show={showPassword} onHide={() => setShowPassword(false)} utente={utentePassword} onSalva={handleResetPassword} />
     </Container>
   );
 }

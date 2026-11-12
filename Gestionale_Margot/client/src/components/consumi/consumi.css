@@ -1,0 +1,43 @@
+/* ============================================================
+   CONSUMI — stile Margot
+   Una scheda con i movimenti in attesa (gialla quando ce ne sono), il report come elenco di
+   schede con il consumo in grande, e i report precedenti in un elenco a scomparsa.
+   ============================================================ */
+
+.con-pagina { padding-bottom: 40px; }
+
+.con-pendenti { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; background: #fff; border-radius: 28px; padding: 18px 22px; margin: 16px 0 24px; box-shadow: var(--shadow-sm); }
+.con-pendenti--attivi { background: var(--sun); }
+.con-pendenti-num { font: 400 46px/1 var(--font-heading); }
+.con-pendenti-testo { margin: 4px 0 0; font: 600 14px var(--font-body); color: var(--ink-soft); }
+.con-pendenti--attivi .con-pendenti-testo { color: var(--ink); }
+
+.con-report-testa { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin: 4px 0 12px; }
+.con-report-testa h3 { margin: 0; font-size: 1.6rem; }
+.con-report-testa h3 small { font: 600 14px var(--font-body); text-transform: none; letter-spacing: 0; color: var(--ink-soft); }
+
+.con-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.con-riga { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; align-items: center; background: #fff; border-radius: 22px; padding: 14px 18px; box-shadow: var(--shadow-sm); border-left: 8px solid var(--lilac); }
+.con-cat--arancio { border-left-color: var(--orange); }
+.con-cat--sole { border-left-color: var(--sun); }
+.con-cat--magenta { border-left-color: var(--magenta); }
+.con-cat--verde { border-left-color: var(--teal); }
+.con-cat--lime { border-left-color: var(--lime); }
+.con-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.con-nome { font-size: 17px; overflow-wrap: anywhere; }
+.con-meta { font: 600 13px var(--font-body); color: var(--ink-soft); }
+.con-quantita { display: flex; flex-direction: column; align-items: center; min-width: 64px; }
+.con-quantita b { font: 400 36px/1 var(--font-heading); }
+.con-quantita small { font: 600 11px var(--font-body); color: var(--ink-soft); }
+
+.con-storico { margin-top: 28px; }
+.con-storico-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.con-storico-voce { width: 100%; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; background: #fff; border: 2px solid var(--line); border-radius: 18px; padding: 8px 16px; font: 600 15px var(--font-body); color: var(--ink); }
+.con-storico-voce:hover { border-color: var(--ink); }
+.con-storico-voce[aria-current="true"] { border-color: var(--ink); background: var(--cream); }
+.con-storico-da { color: var(--ink-soft); font-weight: 400; }
+.con-storico-n { flex: none; background: var(--ink-soft); color: #fff; border-radius: 999px; padding: 3px 12px; font: 700 12px var(--font-body); }
+
+@media (min-width: 1200px) {
+  .con-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+}

@@ -1,12 +1,26 @@
 import { useState, useEffect } from 'react';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import { Navbar, Nav, NavDropdown, Container, Modal, Form, Button, Alert, Badge, ListGroup } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { NavDropdown, Modal, Form, Button, Alert, Badge, ListGroup, Offcanvas } from 'react-bootstrap';
+import { Link, NavLink } from 'react-router-dom';
 import { API_URL } from '../config';
 import { formatDataOraIT } from '../dateUtils';
-import '../App.css';
 import NotifichePushVoce from './NotifichePushVoce';
 import { sincronizzaPush } from '../push';
+import '../App.css';
+
+// Le sezioni dell'app. "ruoli: null" = visibile a tutti i loggati.
+// "tab: true" = compare nella barra in basso del telefono; le altre finiscono nel menu "Altro".
+const SEZIONI = [
+  { to: '/calendario', icona: 'bi-calendar-event', etichetta: 'Eventi', ruoli: null, tab: true },
+  { to: '/miei-eventi', icona: 'bi-person-check', etichetta: 'I miei eventi', ruoli: ['volontari'], tab: true },
+  { to: '/magazzino', icona: 'bi-box-seam', etichetta: 'Magazzino', ruoli: ['amministrazione', 'bar'], tab: true },
+  { to: '/ordini', icona: 'bi-cart-check', etichetta: 'Ordini', ruoli: ['amministrazione', 'bar'], tab: true },
+  { to: '/consumi', icona: 'bi-graph-down-arrow', etichetta: 'Consumi', ruoli: ['amministrazione', 'bar'], tab: true },
+  { to: '/personale', icona: 'bi-people', etichetta: 'Personale', ruoli: ['amministrazione'], tab: false },
+  { to: '/storico', icona: 'bi-clock-history', etichetta: 'Storico', ruoli: ['amministrazione'], tab: false }
+];
+
+const classeLink = ({ isActive }) => `shell-link${isActive ? ' on' : ''}`;
 
 function NavHeader(props) {
   const [showCambiaPassword, setShowCambiaPassword] = useState(false);
@@ -17,11 +31,9 @@ function NavHeader(props) {
   const [notifiche, setNotifiche] = useState([]);
   const [nonLette, setNonLette] = useState(0);
   const [showNotifiche, setShowNotifiche] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   const puoAvereNotifiche = props.loggedIn && props.user?.ruolo === 'volontari';
-  useEffect(() => {
-      if (props.loggedIn) sincronizzaPush();
-    }, [props.loggedIn]);
 
   const fetchConteggioNotifiche = () => {
     fetch(`${API_URL}/api/notifiche/conteggio`, { credentials: 'include' })
@@ -40,7 +52,19 @@ function NavHeader(props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [puoAvereNotifiche]);
 
+  // Dopo il login, se questo dispositivo ha già le notifiche attive, allinea il server
+  useEffect(() => {
+    if (props.loggedIn) sincronizzaPush();
+  }, [props.loggedIn]);
+
+  // Lascia spazio al menu (a sinistra su computer, in basso su telefono): vedi theme.css
+  useEffect(() => {
+    document.body.classList.toggle('con-shell', Boolean(props.loggedIn));
+    return () => document.body.classList.remove('con-shell');
+  }, [props.loggedIn]);
+
   const apriNotifiche = () => {
+    setShowMenu(false);
     setShowNotifiche(true);
     fetch(`${API_URL}/api/notifiche`, { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : []))
@@ -109,112 +133,111 @@ function NavHeader(props) {
     }
   };
 
-  return (
-    <Navbar sticky="top" bg="dark" variant="dark" expand="lg" className="navbar shadow-sm">
-      <Container fluid>
-        {/* Brand / Logo */}
-        <Navbar.Brand as={Link} to="/" className="navbar-brand">
-          <i className="bi bi-stars text-warning me-2"></i>
+  // ---------- Non loggato: solo una barretta con il logo e il link di accesso ----------
+  if (!props.loggedIn) {
+    return (
+      <header className="shell-top shell-top--sempre">
+        <Link to="/" className="shell-brand">
+          <span className="shell-logo" aria-hidden="true">m</span>
           Margot
-        </Navbar.Brand>
-        
-        <Navbar.Toggle aria-controls="basic-navbar-nav" className="navbar-toggle"/>
-        
-        <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="ms-auto align-items-center">
-            
-            {/* Link al Magazzino (solo Amministrazione e Bar, che lo gestiscono) */}
-            {props.loggedIn && (props.user?.ruolo === 'amministrazione' || props.user?.ruolo === 'bar') && (
-              <Nav.Link as={Link} to="/magazzino" className="navbar-link me-3">
-                <i className="bi bi-box-seam me-1"></i>
-                Magazzino
-              </Nav.Link>
-            )}
+        </Link>
+        <Link to="/login" className="shell-login">
+          <i className="bi bi-box-arrow-in-right me-1"></i>
+          Login
+        </Link>
+      </header>
+    );
+  }
 
-            {/* Link a Cosa Ordinare (solo Amministrazione e Bar) */}
-            {props.loggedIn && (props.user?.ruolo === 'amministrazione' || props.user?.ruolo === 'bar') && (
-              <Nav.Link as={Link} to="/ordini" className="navbar-link me-3">
-                <i className="bi bi-cart-check me-1"></i>
-                Ordini
-              </Nav.Link>
-            )}
+  const ruolo = props.user?.ruolo;
+  const visibili = SEZIONI.filter((s) => !s.ruoli || s.ruoli.includes(ruolo));
+  const inTab = visibili.filter((s) => s.tab);
+  const inAltro = visibili.filter((s) => !s.tab);
 
-            {/* Link ai Consumi (solo Amministrazione e Bar) */}
-            {props.loggedIn && (props.user?.ruolo === 'amministrazione' || props.user?.ruolo === 'bar') && (
-              <Nav.Link as={Link} to="/consumi" className="navbar-link me-3">
-                <i className="bi bi-graph-down-arrow me-1"></i>
-                Consumi
-              </Nav.Link>
-            )}
+  const voceAvvisi = (
+    <button type="button" className="shell-link" onClick={apriNotifiche}>
+      <i className="bi bi-bell"></i>
+      Avvisi
+      {nonLette > 0 && <span className="shell-badge" aria-label={`${nonLette} non lette`}>{nonLette}</span>}
+    </button>
+  );
 
-            {/* Link agli Eventi (visibile a tutti i loggati) */}
-            {props.loggedIn && (
-              <Nav.Link as={Link} to="/calendario" className="navbar-link me-3">
-                <i className="bi bi-calendar-event me-1"></i>
-                Eventi
-              </Nav.Link>
-            )}
+  const vociAccount = (
+    <>
+      <NavDropdown.Item onClick={() => { setShowMenu(false); setShowCambiaPassword(true); }}>
+        <i className="bi bi-key me-2"></i>Cambia password
+      </NavDropdown.Item>
+      <NotifichePushVoce />
+    </>
+  );
 
-            {/* Link a I Miei Eventi (solo Volontari) */}
-            {props.loggedIn && props.user?.ruolo === 'volontari' && (
-              <Nav.Link as={Link} to="/miei-eventi" className="navbar-link me-3">
-                <i className="bi bi-person-check me-1"></i>
-                I Miei Eventi
-              </Nav.Link>
-            )}
+  return (
+    <>
+      {/* TELEFONO: barra in alto con il logo */}
+      <header className="shell-top">
+        <Link to="/" className="shell-brand">
+          <span className="shell-logo" aria-hidden="true">m</span>
+          Margot
+        </Link>
+      </header>
 
-            {/* Link a Gestione Personale (solo Amministrazione) */}
-            {props.loggedIn && props.user?.ruolo === 'amministrazione' && (
-              <Nav.Link as={Link} to="/personale" className="navbar-link me-3">
-                <i className="bi bi-people me-1"></i>
-                Personale
-              </Nav.Link>
-            )}
-            {/* Link a Storico (solo Amministrazione) */}
-            {props.loggedIn && props.user?.ruolo === 'amministrazione' && (
-              <Nav.Link as={Link} to="/storico" className="navbar-link me-3">
-                <i className="bi bi-clock-history me-1"></i>
-                Storico
-              </Nav.Link>
-            )}
-            {/* Campanellino notifiche (solo Volontari, per ora) */}
-            {puoAvereNotifiche && (
-              <Nav.Link onClick={apriNotifiche} className="navbar-link me-3 position-relative" role="button">
-                <i className="bi bi-bell fs-5"></i>
-                {nonLette > 0 && (
-                  <Badge bg="danger" pill className="position-absolute top-0 start-100 translate-middle">
-                    {nonLette}
-                  </Badge>
-                )}
-              </Nav.Link>
-            )}
+      {/* TELEFONO: barra in basso con le sezioni principali */}
+      <nav className="shell-tabs" aria-label="Sezioni">
+        {inTab.map((s) => (
+          <NavLink key={s.to} to={s.to} className={classeLink}>
+            <i className={`bi ${s.icona}`}></i>
+            {s.etichetta}
+          </NavLink>
+        ))}
+        {puoAvereNotifiche && voceAvvisi}
+        <button type="button" className="shell-link" onClick={() => setShowMenu(true)}>
+          <i className="bi bi-three-dots"></i>
+          Altro
+        </button>
+      </nav>
 
-            {/* Menu utente: Cambia password + Logout, aperto a tutti i ruoli */}
-            {props.loggedIn ? (
-              <NavDropdown
-                title={<>Ciao, <b className="text-white">{props.user?.username}</b></>}
-                id="user-menu"
-                align="end"
-              >
-                <NavDropdown.Item onClick={() => setShowCambiaPassword(true)}>
-                  <i className="bi bi-key me-2"></i>Cambia password
-                </NavDropdown.Item>
-                <NotifichePushVoce />
-                <NavDropdown.Divider />
-                <NavDropdown.Item onClick={props.handleLogout} className="text-danger">
-                  <i className="bi bi-box-arrow-right me-2"></i>Logout
-                </NavDropdown.Item>
-              </NavDropdown>
-            ) : (
-              <Nav.Link as={Link} to="/login" className="navbar-link">
-                <i className="bi bi-box-arrow-in-right me-1"></i>
-                Login
-              </Nav.Link>
-            )}
-            
-          </Nav>
-        </Navbar.Collapse>
-      </Container>
+      {/* COMPUTER: menu laterale con tutte le sezioni */}
+      <aside className="shell-side" aria-label="Menu">
+        <Link to="/" className="shell-brand">
+          <span className="shell-logo" aria-hidden="true">m</span>
+          Margot
+        </Link>
+        {visibili.map((s) => (
+          <NavLink key={s.to} to={s.to} className={classeLink}>
+            <i className={`bi ${s.icona}`}></i>
+            {s.etichetta}
+          </NavLink>
+        ))}
+        {puoAvereNotifiche && voceAvvisi}
+        <div className="shell-spazio"></div>
+        <div className="shell-user">{props.user?.username}</div>
+        {vociAccount}
+        <NavDropdown.Divider />
+        <NavDropdown.Item onClick={props.handleLogout} className="text-danger">
+          <i className="bi bi-box-arrow-right me-2"></i>Logout
+        </NavDropdown.Item>
+      </aside>
+
+      {/* TELEFONO: menu "Altro" (sezioni rimaste fuori dalla barra e account) */}
+      <Offcanvas show={showMenu} onHide={() => setShowMenu(false)} placement="bottom" className="shell-menu">
+        <Offcanvas.Header closeButton>
+          <Offcanvas.Title>Menu</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body>
+          <div className="shell-user">{props.user?.username}</div>
+          {inAltro.map((s) => (
+            <NavLink key={s.to} to={s.to} className={classeLink} onClick={() => setShowMenu(false)}>
+              <i className={`bi ${s.icona}`}></i>
+              {s.etichetta}
+            </NavLink>
+          ))}
+          {vociAccount}
+          <NavDropdown.Divider />
+          <NavDropdown.Item onClick={props.handleLogout} className="text-danger">
+            <i className="bi bi-box-arrow-right me-2"></i>Logout
+          </NavDropdown.Item>
+        </Offcanvas.Body>
+      </Offcanvas>
 
       {/* MODALE: cambio password personale */}
       <Modal show={showCambiaPassword} onHide={chiudiModale} centered>
@@ -286,7 +309,7 @@ function NavHeader(props) {
           </Modal.Footer>
         )}
       </Modal>
-    </Navbar>
+    </>
   );
 }
 

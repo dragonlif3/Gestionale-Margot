@@ -1,0 +1,33 @@
+/* ============================================================
+   PERSONALE — stile Margot
+   Un account per scheda: avatar con l'iniziale nel colore del ruolo, nome, etichetta del ruolo e azioni.
+   ============================================================ */
+
+.per-pagina { padding-bottom: 40px; }
+
+/* colori per ruolo (sfondo + testo leggibile) */
+.per-colore--magenta { background: var(--magenta); color: #fff; }
+.per-colore--arancio { background: var(--orange); color: var(--ink); }
+.per-colore--viola { background: var(--violet); color: #fff; }
+.per-colore--verde { background: var(--teal); color: var(--ink); }
+.per-colore--lime { background: var(--lime); color: var(--ink); }
+.per-colore--lilla { background: var(--lilac); color: var(--ink); }
+
+.per-lista { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.per-riga { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: #fff; border-radius: 24px; padding: 14px 16px; box-shadow: var(--shadow-sm); }
+.per-avatar { flex: none; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font: 400 26px/1 var(--font-heading); }
+.per-info { flex: 1; min-width: 140px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.per-nome { font-size: 17px; overflow-wrap: anywhere; }
+.per-tu { margin-left: 8px; padding: 1px 9px; border-radius: 999px; background: var(--ink-soft); color: #fff; font: 700 11px var(--font-body); vertical-align: middle; }
+.per-ruolo { padding: 2px 12px; border-radius: 999px; font: 700 12px var(--font-body); }
+.per-azioni { display: flex; gap: 6px; margin-left: auto; }
+.per-az { width: 44px; height: 44px; border: 0; border-radius: 50%; background: var(--cream); color: var(--ink); display: grid; place-items: center; }
+.per-az:hover:not(:disabled) { background: var(--ink); color: #fff; }
+.per-az--elimina { color: #C4244F; }
+.per-az--elimina:hover:not(:disabled) { background: #C4244F; color: #fff; }
+.per-az:disabled { opacity: .35; }
+.per-vuoto { margin: 16px 0 0; padding: 22px 18px; text-align: center; color: var(--ink-soft); font-weight: 600; border: 2px dashed var(--line); border-radius: 24px; }
+
+@media (min-width: 1200px) {
+  .per-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+}

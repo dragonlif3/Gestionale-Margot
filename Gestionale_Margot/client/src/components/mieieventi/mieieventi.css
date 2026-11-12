@@ -1,0 +1,31 @@
+/* ============================================================
+   I MIEI EVENTI — stile Margot
+   Schede colorate per tipo di evento, come nel calendario; quelle già concluse sono attenuate.
+   ============================================================ */
+
+.mie-pagina { padding-bottom: 40px; }
+.mie-lista { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+
+.mie-card { border-radius: 26px; padding: 16px; min-height: 150px; display: flex; flex-direction: column; gap: 6px; box-shadow: var(--shadow-sm); }
+.mie-card--viola { background: var(--violet); color: #fff; }
+.mie-card--arancio { background: var(--orange); color: var(--ink); }
+.mie-card--lime { background: var(--lime); color: var(--ink); }
+.mie-card--verde { background: var(--teal); color: var(--ink); }
+.mie-card--lilla { background: var(--lilac); color: var(--ink); }
+.mie-card--passato { filter: saturate(.45); }
+
+.mie-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.mie-etichetta { border: 1.5px solid currentColor; border-radius: 999px; padding: 2px 12px; font: italic 700 13px var(--font-body); }
+.mie-data { font: 400 30px/1 var(--font-heading); text-align: right; text-transform: uppercase; }
+.mie-titolo { margin: 8px 0 0; font: 400 34px/1 var(--font-heading); text-transform: uppercase; overflow-wrap: anywhere; }
+.mie-dettagli { margin: 0; font: 600 13px var(--font-body); }
+.mie-azioni { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.mie-stato { background: rgba(255, 255, 255, .35); border-radius: 999px; padding: 5px 12px; font: 700 12px var(--font-body); }
+.mie-card--viola .mie-stato { background: rgba(27, 18, 48, .35); }
+.mie-annulla { min-height: 44px; margin-left: auto; border: 0; border-radius: 999px; background: #fff; color: var(--ink); padding: 0 16px; font: 700 14px var(--font-body); display: inline-flex; align-items: center; gap: 6px; }
+.mie-card :focus-visible { outline-color: var(--ink); }
+.mie-card--viola :focus-visible { outline-color: #fff; }
+
+@media (min-width: 1200px) {
+  .mie-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

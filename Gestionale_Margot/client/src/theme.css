@@ -1,0 +1,206 @@
+/* ============================================================
+   TEMA MARGOT
+   Palette e forme ispirate ai manifesti del circolo: colori vivaci,
+   titoli in maiuscolo condensato (Anton), tondeggiante e leggibile.
+
+   Questo file va importato per ULTIMO (vedi main.jsx). Il resto dei CSS usa
+   ancora i vecchi nomi di colore ("--wine-*", "--gold"): qui sotto li
+   ridefiniamo con la nuova palette, così tutta l'app cambia aspetto da qui.
+   ============================================================ */
+:root {
+  /* ---- Colori del circolo ---- */
+  --ink: #1B1230;          /* testo e fondi scuri */
+  --ink-soft: #5C5070;     /* testi secondari */
+  --cream: #FFF9F0;        /* sfondo pagine */
+  --paper: #FFFFFF;
+  --line: #E7DDF0;
+  --magenta: #B8176B;      /* azione principale (bianco sopra: contrasto 6:1) */
+  --magenta-dark: #8E1253;
+  --magenta-bright: #E6358F;  /* solo decorazioni, mai per il testo */
+  --orange: #FF7A3D;
+  --sun: #FFD83D;
+  --lime: #BFE85A;
+  --teal: #17B3A6;
+  --violet: #5B2BD1;
+  --lilac: #D9A6E3;
+
+  --font-heading: 'Anton', Impact, 'Arial Narrow', sans-serif;
+  --font-body: 'DM Sans', system-ui, 'Segoe UI', sans-serif;
+  --font-script: 'Pacifico', cursive;
+
+  --shadow-sm: 0 2px 8px rgba(27, 18, 48, 0.08);
+  --shadow-md: 0 10px 24px rgba(27, 18, 48, 0.12);
+  --shadow-lg: 0 18px 40px rgba(27, 18, 48, 0.18);
+
+  /* ---- Vecchi nomi -> nuova palette ---- */
+  --wine-900: #1B1230;
+  --wine-800: #2B1F4A;
+  --wine-700: #8E1253;
+  --wine-600: #B8176B;
+  --wine-500: #CF2A7F;
+  --wine-400: #E6358F;
+  --wine-100: #FBE3EF;
+  --gold: #FFD83D;
+  --gold-soft: #FFE98A;
+
+  /* ---- Variabili di Bootstrap ----
+     "warning" è da sempre il colore del brand in questa app: resta tale. */
+  --bs-warning: var(--magenta);
+  --bs-warning-rgb: 184, 23, 107;
+  --bs-warning-text-emphasis: var(--magenta-dark);
+  --bs-warning-bg-subtle: #FFF1C2;
+  --bs-warning-border-subtle: var(--sun);
+  --bs-primary: var(--violet);
+  --bs-primary-rgb: 91, 43, 209;
+  --bs-success: #0E7C74;
+  --bs-success-rgb: 14, 124, 116;
+  --bs-danger: #C4244F;
+  --bs-danger-rgb: 196, 36, 79;
+  --bs-dark: var(--ink);
+  --bs-dark-rgb: 27, 18, 48;
+  --bs-body-font-family: var(--font-body);
+  --bs-body-color: var(--ink);
+  --bs-body-bg: var(--cream);
+  --bs-border-color: var(--line);
+  --bs-link-color: var(--magenta);
+  --bs-link-hover-color: var(--magenta-dark);
+}
+
+body { font-family: var(--font-body); background: var(--cream); color: var(--ink); }
+
+/* ---- Titoli: Anton maiuscolo, come i manifesti ---- */
+h1, h2, h3, h4, .navbar-brand {
+  font-family: var(--font-heading);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  line-height: 1.05;
+}
+h1 { font-size: clamp(2.2rem, 7vw, 3.2rem); }
+h2 { font-size: clamp(1.9rem, 6vw, 2.75rem); }
+h3 { font-size: clamp(1.5rem, 4.5vw, 2rem); }
+h4 { font-size: 1.4rem; }
+/* titolo di pagina: inchiostro, con l'icona a colori */
+h2.text-warning, h1.text-warning { color: var(--ink) !important; }
+h2.text-warning > i, h1.text-warning > i { color: var(--magenta); margin-right: .25rem; }
+.text-warning { color: var(--magenta) !important; }
+
+:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
+
+/* ---- Pulsanti: a pillola, area di tocco comoda ---- */
+.btn { border-radius: 999px; font-weight: 700; min-height: 44px; padding-inline: 1.25rem; display: inline-flex; align-items: center; justify-content: center; gap: .35rem; }
+.btn-sm { min-height: 38px; padding-inline: 1rem; }
+.btn-warning { background: var(--magenta); border-color: var(--magenta); color: #fff; }
+.btn-warning:hover, .btn-warning:focus, .btn-warning:active { background: var(--magenta-dark); border-color: var(--magenta-dark); color: #fff; }
+.btn-outline-warning { color: var(--magenta); border: 2px solid var(--magenta); background: transparent; }
+.btn-outline-warning:hover, .btn-outline-warning:active { background: var(--magenta); color: #fff; border-color: var(--magenta); }
+.btn-success { background: #0E7C74; border-color: #0E7C74; color: #fff; }
+.btn-success:hover { background: #0A635D; border-color: #0A635D; }
+.btn-danger { background: #C4244F; border-color: #C4244F; }
+.btn-danger:hover { background: #A21C41; border-color: #A21C41; }
+.btn-secondary { background: var(--ink-soft); border-color: var(--ink-soft); color: #fff; }
+.btn-outline-secondary, .btn-outline-danger, .btn-outline-success { border-width: 2px; }
+.btn-link { min-height: 0; }
+
+/* ---- Etichette (badge): pillole piene, testo sempre leggibile ---- */
+.badge { border-radius: 999px; font-weight: 700; padding: .4em .8em; }
+.badge.bg-warning { background: var(--sun) !important; color: var(--ink) !important; }
+.badge.bg-info { background: var(--teal) !important; color: var(--ink) !important; }
+.badge.bg-secondary { background: var(--ink-soft) !important; color: #fff !important; }
+.badge.bg-success { background: #0E7C74 !important; color: #fff !important; }
+.badge.bg-danger { background: #C4244F !important; color: #fff !important; }
+
+/* ---- Campi dei moduli ---- */
+.form-control, .form-select { border: 2px solid var(--ink); border-radius: 14px; min-height: 46px; background-color: #fff; }
+.form-control:focus, .form-select:focus { border-color: var(--magenta); box-shadow: 0 0 0 .25rem rgba(184, 23, 107, .2); }
+.form-label { font-weight: 700; }
+
+/* ---- Finestre, avvisi, tabelle ---- */
+.modal-content { border: 0; border-radius: 28px; box-shadow: var(--shadow-lg); }
+.modal-header { border-bottom: 0; padding: 1.25rem 1.5rem .5rem; }
+.modal-header .modal-title { font-family: var(--font-heading); font-weight: 400; text-transform: uppercase; letter-spacing: .03em; font-size: 1.6rem; }
+.modal-footer { border-top: 0; }
+.alert { border: 0; border-radius: 18px; }
+.alert-warning { background: #FFF1C2; color: var(--ink); }
+.table-responsive { border-radius: 20px; }
+.table thead.table-dark th, .table-dark { background-color: var(--ink) !important; color: #fff; border-color: var(--ink); }
+.list-group-item { border-color: var(--line); }
+
+/* ============================================================
+   NAVIGAZIONE
+   Telefono: barra in alto (logo) + barra in basso (sezioni).
+   Computer (>= 992px): menu laterale scuro.
+   ============================================================ */
+.shell-logo {
+  width: 40px; height: 40px; border-radius: 50%; flex: none;
+  background: linear-gradient(140deg, var(--magenta-bright), var(--orange) 55%, var(--teal));
+  display: grid; place-items: center; color: #fff;
+  font: 400 24px var(--font-script); padding-bottom: 4px;
+}
+.shell-brand { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font: 400 26px/1 var(--font-heading); letter-spacing: .04em; text-transform: uppercase; }
+.shell-brand:hover { color: #fff; }
+
+.shell-link {
+  display: flex; align-items: center; gap: 12px; position: relative;
+  border: 0; background: none; border-radius: 16px; color: var(--ink);
+  text-decoration: none; font: 700 15px var(--font-body); cursor: pointer;
+}
+.shell-link i { font-size: 1.35rem; line-height: 1; }
+.shell-link.on { background: var(--sun); color: var(--ink); }
+.shell-badge { position: absolute; top: 2px; right: 22%; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--magenta); color: #fff; font: 700 12px/20px var(--font-body); text-align: center; }
+
+/* barra in alto (telefono) */
+.shell-top {
+  position: sticky; top: 0; z-index: 1030; display: flex; align-items: center; gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px; background: var(--ink);
+}
+.shell-top .shell-login { margin-left: auto; color: #fff; font-weight: 700; text-decoration: none; padding: 10px 4px; }
+
+/* barra in basso (telefono) */
+.shell-tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 1030;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px;
+  padding: 6px 6px calc(10px + env(safe-area-inset-bottom));
+  background: #fff; border-top: 1px solid var(--line);
+}
+.shell-tabs .shell-link { flex-direction: column; justify-content: center; gap: 2px; min-height: 58px; font-size: 11px; padding: 4px 2px; text-align: center; }
+
+/* contenuto del menu "Altro" */
+.shell-menu .shell-link { min-height: 52px; padding: 0 14px; width: 100%; }
+.shell-menu .dropdown-item, .shell-side .dropdown-item { display: flex; align-items: center; min-height: 52px; padding: 0 14px; border-radius: 16px; font-weight: 700; white-space: normal; }
+.shell-menu .dropdown-item:hover { background: var(--cream); }
+.shell-menu .dropdown-item-text { padding: 6px 14px; }
+.shell-user { font: 400 1.4rem var(--font-heading); text-transform: uppercase; letter-spacing: .03em; padding: 0 14px 8px; }
+
+/* menu laterale (computer) */
+.shell-side { display: none; }
+@media (min-width: 992px) {
+  .shell-top:not(.shell-top--sempre), .shell-tabs { display: none; }
+  .shell-side {
+    position: fixed; top: 0; bottom: 0; left: 0; width: 248px; z-index: 1030;
+    display: flex; flex-direction: column; gap: 6px; padding: 22px 14px; overflow-y: auto; background: var(--ink); color: #fff;
+  }
+  .shell-side .shell-brand { margin: 0 6px 20px; }
+  .shell-side .shell-link { color: #fff; min-height: 46px; padding: 0 14px; width: 100%; }
+  .shell-side .shell-link.on { color: var(--ink); }
+  .shell-side .shell-spazio { flex: 1; }
+  .shell-side .shell-user { color: #fff; font-size: 1.2rem; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .15); }
+  .shell-side .dropdown-item { color: #fff; }
+  .shell-side .dropdown-item:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+  .shell-side .dropdown-item-text { color: rgba(255, 255, 255, .8); }
+  body.con-shell #root { padding-left: 248px; }
+}
+@media (max-width: 991.98px) {
+  body.con-shell #root { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
+}
+
+/* il menu "Altro" sul telefono: pannello che sale dal basso con gli angoli arrotondati */
+.shell-menu.offcanvas-bottom { border-radius: 28px 28px 0 0; height: auto; max-height: 85vh; }
+.shell-menu .offcanvas-title { font: 400 1.6rem var(--font-heading); text-transform: uppercase; letter-spacing: .03em; }
+
+/* ---- Stampa / PDF: niente menu, niente barre, la pagina occupa tutto il foglio ---- */
+@media print {
+  .shell-top, .shell-tabs, .shell-side, .offcanvas, .modal { display: none !important; }
+  body.con-shell #root { padding: 0 !important; }
+  body { background: #fff !important; }
+}

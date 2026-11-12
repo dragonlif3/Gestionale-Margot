@@ -1,0 +1,4 @@
+/* PAGINA NON TROVATA — un grande 404 sul cerchio sfumato del marchio */
+.nf-pagina { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 40px 16px 56px; }
+.nf-cerchio { width: min(300px, 78vw); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; margin-bottom: 20px; background: linear-gradient(140deg, var(--magenta-bright), var(--orange) 55%, var(--teal)); box-shadow: var(--shadow-md); }
+.nf-numero { margin: 0; color: var(--ink); font: 400 clamp(5rem, 24vw, 8rem)/1 var(--font-heading); letter-spacing: .02em; }

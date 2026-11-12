@@ -51,3 +51,16 @@ export function getPermessi(user) {
     puoVedereStatoPagamento: ['eventi', 'amministrazione'].includes(ruolo)
   };
 }
+
+export const MESI_BREVI = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC'];
+
+// Il tipo di evento è testo libero ("Concerto", "DJ set"...): il colore si sceglie in base a
+// parole chiave, come nei manifesti del circolo. Tutto il resto è "lilla".
+export function coloreTipo(tipo) {
+  const t = String(tipo || '').toLowerCase();
+  if (/concert|live|jazz|band|music/.test(t)) return 'viola';
+  if (/karaoke|festa|party|dj|serata|ballo/.test(t)) return 'arancio';
+  if (/torne|sport|calcett|ping|scacchi|gioc|quiz/.test(t)) return 'lime';
+  if (/mostra|present|cinema|libro|teatro|arte|laborator/.test(t)) return 'verde';
+  return 'lilla';
+}

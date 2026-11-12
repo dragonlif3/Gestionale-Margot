@@ -5,6 +5,10 @@
       "destination": "https://margot.giize.com/api/:path*"
     },
     {
+      "source": "/images/:path*",
+      "destination": "https://margot.giize.com/images/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

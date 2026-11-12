@@ -3,8 +3,9 @@ import { Container, Row, Col, Button, Alert, Spinner, Nav } from 'react-bootstra
 import GrigliaMese from './calendario/GrigliaMese';
 import BachecaGrafica from './calendario/BachecaGrafica';
 import TabellaPagamenti from './calendario/TabellaPagamenti';
-import ModaleGiorno from './calendario/ModaleGiorno';
+import AgendaGiorno from './calendario/AgendaGiorno';
 import ModaleEvento from './calendario/ModaleEvento';
+import './calendario/calendario.css';
 import { getPermessi, toDateKey } from './calendario/calendarioUtils';
 import {
   caricaEventi,
@@ -28,8 +29,8 @@ function Calendario({ user }) {
   const [error, setError] = useState(null);
   const [tab, setTab] = useState('calendario');
 
-  const [giornoSelezionato, setGiornoSelezionato] = useState(null);
-  const [showGiornoModal, setShowGiornoModal] = useState(false);
+  // Il giorno scelto nel calendario: i suoi eventi compaiono nell'agenda accanto alla griglia
+  const [giornoSelezionato, setGiornoSelezionato] = useState(new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate()));
 
   const [showFormModal, setShowFormModal] = useState(false);
   const [eventoInModifica, setEventoInModifica] = useState(null); // null = nuovo evento
@@ -97,15 +98,24 @@ function Calendario({ user }) {
     return mappa;
   }, [eventi]);
 
+  const eventiDelGiorno = eventiPerGiorno[toDateKey(giornoSelezionato)] || [];
+
   // ---------- Navigazione e finestre ----------
 
+  // Cambiando mese si seleziona oggi (se il mese è quello corrente) oppure il primo del mese
   const cambiaMese = (delta) => {
-    setMeseVisto(new Date(meseVisto.getFullYear(), meseVisto.getMonth() + delta, 1));
+    const nuovo = new Date(meseVisto.getFullYear(), meseVisto.getMonth() + delta, 1);
+    const èMeseCorrente = nuovo.getFullYear() === oggi.getFullYear() && nuovo.getMonth() === oggi.getMonth();
+    setMeseVisto(nuovo);
+    setGiornoSelezionato(èMeseCorrente ? new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate()) : nuovo);
   };
 
-  const apriGiorno = (data) => {
+  // Clic su un giorno; se è di un mese adiacente, la griglia si sposta su quel mese
+  const selezionaGiorno = (data) => {
     setGiornoSelezionato(data);
-    setShowGiornoModal(true);
+    if (data.getMonth() !== meseVisto.getMonth() || data.getFullYear() !== meseVisto.getFullYear()) {
+      setMeseVisto(new Date(data.getFullYear(), data.getMonth(), 1));
+    }
   };
 
   const apriNuovoEvento = (dataPrecompilata) => {
@@ -120,7 +130,6 @@ function Calendario({ user }) {
 
   const apriModificaEvento = (evento) => {
     setEventoInModifica(evento);
-    setShowGiornoModal(false);
     setShowFormModal(true);
   };
 
@@ -141,7 +150,6 @@ function Calendario({ user }) {
     if (!window.confirm("Sei sicuro di voler eliminare questo evento? Verrà rimossa anche la notifica collegata per il team Grafica.")) return;
     try {
       await eliminaEvento(id);
-      setShowGiornoModal(false);
       fetchEventi();
     } catch (err) {
       alert(err.message);
@@ -200,7 +208,7 @@ function Calendario({ user }) {
   }
 
   return (
-    <Container className="mt-4 mb-5">
+    <Container className="mt-4 mb-5 cal-pagina">
       <Row className="mb-3 align-items-center">
         <Col>
           <h2 className="text-warning">
@@ -243,14 +251,26 @@ function Calendario({ user }) {
       )}
 
       {tab === 'calendario' && (
-        <GrigliaMese
-          meseVisto={meseVisto}
-          onCambiaMese={cambiaMese}
-          eventiPerGiorno={eventiPerGiorno}
-          permessi={permessi}
-          onApriGiorno={apriGiorno}
-          onNuovoEvento={apriNuovoEvento}
-        />
+        <div className="cal-layout">
+          <GrigliaMese
+            meseVisto={meseVisto}
+            onCambiaMese={cambiaMese}
+            eventiPerGiorno={eventiPerGiorno}
+            giornoSelezionato={giornoSelezionato}
+            onSelezionaGiorno={selezionaGiorno}
+            permessi={permessi}
+          />
+          <AgendaGiorno
+            giorno={giornoSelezionato}
+            eventi={eventiDelGiorno}
+            permessi={permessi}
+            onIscriviti={handleIscriviti}
+            onAnnullaIscrizione={handleCancellaIscrizione}
+            onModifica={apriModificaEvento}
+            onElimina={handleEliminaEvento}
+            onNuovoEvento={apriNuovoEvento}
+          />
+        </div>
       )}
 
       {tab === 'grafica' && (
@@ -260,19 +280,6 @@ function Calendario({ user }) {
       {tab === 'pagamenti' && (
         <TabellaPagamenti pagamenti={pagamenti} loading={loadingPagamenti} onSegnaPagato={handleSegnaPagato} />
       )}
-
-      <ModaleGiorno
-        show={showGiornoModal}
-        onHide={() => setShowGiornoModal(false)}
-        giorno={giornoSelezionato}
-        eventiPerGiorno={eventiPerGiorno}
-        permessi={permessi}
-        onIscriviti={handleIscriviti}
-        onAnnullaIscrizione={handleCancellaIscrizione}
-        onModifica={apriModificaEvento}
-        onElimina={handleEliminaEvento}
-        onNuovoEvento={apriNuovoEvento}
-      />
 
       <ModaleEvento
         show={showFormModal}

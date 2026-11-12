@@ -1,21 +1,20 @@
-import React from 'react';
-import { Container, Row, Col, Button } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import './notfound.css';
 
+// La pagina che si vede quando l'indirizzo non esiste.
 function NotFound() {
   return (
-    <Container className="text-center mt-5 container-not-found">
-      <Row>
-        <Col>
-          <h1 className="display-1">404</h1>
-          <h2>Pagina non trovata</h2>
-          <p className="lead">La pagina che stai cercando non esiste.</p>
-          <Button as={Link} to="/" variant="warning">
-            Torna alla Home
-          </Button>
-        </Col>
-      </Row>
-    </Container>
+    <main className="nf-pagina container-not-found">
+      <div className="nf-cerchio">
+        <h1 className="nf-numero">404</h1>
+      </div>
+      <h2>Pagina non trovata</h2>
+      <p className="lead">La pagina che stai cercando non esiste.</p>
+      <Button as={Link} to="/" variant="warning">
+        Torna alla Home
+      </Button>
+    </main>
   );
 }
 

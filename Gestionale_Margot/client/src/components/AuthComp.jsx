@@ -1,11 +1,14 @@
-import React, { useActionState } from 'react';
-import { Form, Button, Row, Col, Container, Nav, Alert } from 'react-bootstrap';
+import { useState, useActionState } from 'react';
+import { Form, Button, Nav, Alert } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import './auth.css';
 
 function LoginForm(props) {
+  const [mostraPassword, setMostraPassword] = useState(false);
+
   // useActionState gestisce automaticamente il pending e il risultato della funzione
   const [state, formAction, isPending] = useActionState(loginFunction, { error: null });
-  
+
   async function loginFunction(prevState, formData) {
     const credentials = {
       username: formData.get('username'),
@@ -17,67 +20,76 @@ function LoginForm(props) {
       await props.handleLogin(credentials);
       return { success: true };
     } catch (error) {
-        if (error.status === 429) {
-          return { error: 'Troppi tentativi di accesso. Riprova tra qualche minuto.' };
-        }
-        return { error: 'Login fallito. Controlla le tue credenziali.' };
+      // Troppi tentativi: il server blocca l'account per qualche minuto (vedi il limite al login)
+      if (error.status === 429) {
+        return { error: 'Troppi tentativi di accesso. Riprova tra qualche minuto.' };
       }
+      return { error: 'Login fallito. Controlla le tue credenziali.' };
+    }
   }
 
   return (
-    <Container className="login-container screen mb-4 p-4">
-      <Row className="justify-content-center">
-        <Col md={6}>
-          <h1 className="text-center mb-4 text-warning">
-            <i className="bi bi-person-circle"></i> Login
-          </h1>
-          
-          <div className="mb-4 p-4 border rounded shadow-sm bg-light">
-            {isPending && <Alert variant="warning">Attendi la risposta dal server...</Alert>}
-            {state?.error && <Alert variant="danger">{state.error}</Alert>}
+    <main className="login-pagina">
+      <div className="login-card">
+        <div className="login-marchio">
+          <span className="login-logo" aria-hidden="true">m</span>
+          <span className="login-nome">Margot</span>
+        </div>
+        <p className="login-sotto">Circolo Arci · Gestionale</p>
 
-            <Form action={formAction}>
-              <Form.Group controlId="username" className="mb-3">
-                <Form.Label>Username</Form.Label>
-                <Form.Control 
-                  name="username" 
-                  type="text" 
-                  required 
-                  minLength={2}
-                  placeholder="Inserisci username" 
-                />
-              </Form.Group>
-              
-              <Form.Group controlId="password" className="mb-4">
-                <Form.Label>Password</Form.Label>
-                <Form.Control 
-                  name="password" 
-                  type="password" 
-                  required 
-                  minLength={6}
-                  placeholder="Inserisci password" 
-                />
-              </Form.Group>
-              
-              <div className="d-flex justify-content-between">
-                <Button 
-                  variant="warning" 
-                  type="submit" 
-                  disabled={isPending}
-                  className="px-4"
-                > 
-                  {isPending ? 'Accesso...' : 'Login'}
-                </Button>
-                
-                <Link className="btn btn-secondary px-4" to={'/'}>
-                  Annulla
-                </Link>
-              </div>
-            </Form>
-          </div>
-        </Col>
-      </Row>
-    </Container>
+        <h1 className="login-titolo">Accedi</h1>
+
+        {isPending && <Alert variant="warning" role="status">Attendi la risposta dal server...</Alert>}
+        {state?.error && <Alert variant="danger" role="alert">{state.error}</Alert>}
+
+        <Form action={formAction}>
+          <Form.Group controlId="username" className="mb-3">
+            <Form.Label>Username</Form.Label>
+            <Form.Control
+              name="username"
+              type="text"
+              required
+              minLength={2}
+              placeholder="Inserisci username"
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </Form.Group>
+
+          <Form.Group controlId="password" className="mb-4">
+            <Form.Label>Password</Form.Label>
+            <div className="login-password">
+              <Form.Control
+                name="password"
+                type={mostraPassword ? 'text' : 'password'}
+                required
+                minLength={6}
+                placeholder="Inserisci password"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="login-occhio"
+                onClick={() => setMostraPassword((v) => !v)}
+                aria-pressed={mostraPassword}
+                aria-label={mostraPassword ? 'Nascondi password' : 'Mostra password'}
+              >
+                <i className={`bi ${mostraPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+              </button>
+            </div>
+          </Form.Group>
+
+          <Button variant="warning" type="submit" disabled={isPending} className="login-invia">
+            {isPending ? 'Accesso...' : 'Login'}
+          </Button>
+          <Link className="login-annulla" to={'/'}>
+            Annulla
+          </Link>
+        </Form>
+      </div>
+    </main>
   );
 }
 

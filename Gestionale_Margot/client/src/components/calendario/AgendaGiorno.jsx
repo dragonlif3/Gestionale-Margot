@@ -1,17 +1,13 @@
 import { useState } from 'react';
-import { Modal, Button } from 'react-bootstrap';
-import EventoDettaglio from './EventoDettaglio';
+import SchedaEvento from './SchedaEvento';
 import { caricaIscritti } from './api';
-import { toDateKey } from './calendarioUtils';
 
-// La finestra che mostra gli eventi di un giorno.
-// Tiene da sé quali elenchi di iscritti sono aperti e quelli già scaricati:
-// sono dettagli che riguardano solo questa finestra.
-function ModaleGiorno({
-  show,
-  onHide,
+// L'agenda del giorno selezionato: le schede degli eventi di quel giorno.
+// Su telefono sta sotto la griglia, su computer in un pannello a destra.
+// Tiene da sé quali elenchi di iscritti sono aperti e quelli già scaricati.
+function AgendaGiorno({
   giorno,
-  eventiPerGiorno,
+  eventi,
   permessi,
   onIscriviti,
   onAnnullaIscrizione,
@@ -40,15 +36,21 @@ function ModaleGiorno({
   };
 
   return (
-    <Modal show={show} onHide={onHide} centered>
-      <Modal.Header closeButton>
-        <Modal.Title>
-          {giorno && giorno.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {giorno && (eventiPerGiorno[toDateKey(giorno)] || []).map((ev) => (
-          <EventoDettaglio
+    <aside className="cal-agenda" aria-label="Eventi del giorno">
+      <div className="cal-agenda-testa">
+        <h3>{giorno.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+        {permessi.puoGestireEventi && (
+          <button type="button" className="btn btn-warning btn-sm" onClick={() => onNuovoEvento(giorno)}>
+            <i className="bi bi-plus-circle"></i> Aggiungi evento
+          </button>
+        )}
+      </div>
+
+      {eventi.length === 0 ? (
+        <p className="cal-vuoto">Nessun evento in questo giorno.</p>
+      ) : (
+        eventi.map((ev) => (
+          <SchedaEvento
             key={ev.id}
             ev={ev}
             permessi={permessi}
@@ -60,15 +62,10 @@ function ModaleGiorno({
             onModifica={onModifica}
             onElimina={onElimina}
           />
-        ))}
-        {permessi.puoGestireEventi && (
-          <Button variant="success" size="sm" onClick={() => onNuovoEvento(giorno)}>
-            <i className="bi bi-plus-circle me-1"></i> Aggiungi un altro evento in questo giorno
-          </Button>
-        )}
-      </Modal.Body>
-    </Modal>
+        ))
+      )}
+    </aside>
   );
 }
 
-export default ModaleGiorno;
+export default AgendaGiorno;

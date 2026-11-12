@@ -1,40 +1,33 @@
 import { useMemo } from 'react';
-import { Row, Col, Button } from 'react-bootstrap';
-import { GIORNI_SETTIMANA, MESI, toDateKey, buildMonthGrid } from './calendarioUtils';
+import { GIORNI_SETTIMANA, MESI, toDateKey, buildMonthGrid, coloreTipo } from './calendarioUtils';
 
-// Icone compatte di stato da mostrare sulla pillola dell'evento nel calendario
+// Icone compatte di stato da mostrare sulle pillole degli eventi (solo su computer)
 function iconeStato(ev, permessi) {
   const icone = [];
   if (permessi.puoVedereStatoGrafica && ev.grafica_stato) {
     const pronta = ev.grafica_stato === 'completato';
     icone.push(
-      <i
-        key="grafica"
-        className={`bi ${pronta ? 'bi-easel-fill' : 'bi-easel'} calendar-status-icon ${pronta ? 'calendar-status-icon--ok' : 'calendar-status-icon--pending'}`}
-        title={pronta ? 'Grafica pronta' : 'Grafica in lavorazione'}
-      ></i>
+      <i key="grafica" className={`bi ${pronta ? 'bi-easel-fill' : 'bi-easel'} ms-1`} title={pronta ? 'Grafica pronta' : 'Grafica in lavorazione'}></i>
     );
   }
   if (permessi.puoVedereStatoPagamento && ev.pagamento_stato) {
     const pagato = ev.pagamento_stato === 'pagato';
     icone.push(
-      <i
-        key="pagamento"
-        className={`bi ${pagato ? 'bi-coin' : 'bi-exclamation-circle'} calendar-status-icon ${pagato ? 'calendar-status-icon--ok' : 'calendar-status-icon--pending'}`}
-        title={pagato ? 'Pagato' : 'Da pagare'}
-      ></i>
+      <i key="pagamento" className={`bi ${pagato ? 'bi-coin' : 'bi-exclamation-circle'} ms-1`} title={pagato ? 'Pagato' : 'Da pagare'}></i>
     );
   }
   return icone;
 }
 
-// La griglia del mese con le frecce per cambiare mese.
+// La griglia del mese. Ogni giorno è un pulsante: su telefono mostra dei puntini colorati
+// (uno per evento, per tipo), su computer le pillole con i nomi degli eventi.
 //  - meseVisto: una Date che punta al primo giorno del mese mostrato
-//  - eventiPerGiorno: { 'YYYY-MM-DD': [eventi] }
-//  - onApriGiorno(data): clic su un giorno che ha eventi
-//  - onNuovoEvento(data): clic su un giorno vuoto (solo per chi può gestire gli eventi)
-function GrigliaMese({ meseVisto, onCambiaMese, eventiPerGiorno, permessi, onApriGiorno, onNuovoEvento }) {
+//  - giornoSelezionato: la Date del giorno scelto (il suo contenuto sta nell'agenda accanto)
+//  - onSelezionaGiorno(data): clic su un giorno, anche di un mese adiacente
+function GrigliaMese({ meseVisto, onCambiaMese, eventiPerGiorno, giornoSelezionato, onSelezionaGiorno, permessi }) {
   const oggi = new Date();
+  const chiaveOggi = toDateKey(oggi);
+  const chiaveSelezionato = toDateKey(giornoSelezionato);
 
   const settimane = useMemo(
     () => buildMonthGrid(meseVisto.getFullYear(), meseVisto.getMonth()),
@@ -42,63 +35,63 @@ function GrigliaMese({ meseVisto, onCambiaMese, eventiPerGiorno, permessi, onApr
   );
 
   return (
-    <>
-      <Row className="mb-3 align-items-center">
-        <Col xs="auto">
-          <Button variant="outline-warning" size="sm" onClick={() => onCambiaMese(-1)}>
-            <i className="bi bi-chevron-left"></i>
-          </Button>
-        </Col>
-        <Col className="text-center">
-          <h4 className="mb-0 text-capitalize">{MESI[meseVisto.getMonth()]} {meseVisto.getFullYear()}</h4>
-        </Col>
-        <Col xs="auto">
-          <Button variant="outline-warning" size="sm" onClick={() => onCambiaMese(1)}>
-            <i className="bi bi-chevron-right"></i>
-          </Button>
-        </Col>
-      </Row>
+    <section aria-label="Calendario">
+      <div className="cal-mese">
+        <button type="button" className="cal-freccia" onClick={() => onCambiaMese(-1)} aria-label="Mese precedente">
+          <i className="bi bi-chevron-left"></i>
+        </button>
+        <h3>{MESI[meseVisto.getMonth()]} {meseVisto.getFullYear()}</h3>
+        <button type="button" className="cal-freccia" onClick={() => onCambiaMese(1)} aria-label="Mese successivo">
+          <i className="bi bi-chevron-right"></i>
+        </button>
+      </div>
 
-      <div className="calendar-grid">
+      <div className="cal-griglia">
         {GIORNI_SETTIMANA.map((g) => (
-          <div key={g} className="calendar-weekday">{g}</div>
+          <div key={g} className="cal-wk">
+            <span className="d-lg-none">{g[0]}</span>
+            <span className="d-none d-lg-inline">{g}</span>
+          </div>
         ))}
 
-        {settimane.flat().map((data, idx) => {
+        {settimane.flat().map((data) => {
           const key = toDateKey(data);
           const eventiGiorno = eventiPerGiorno[key] || [];
           const fuoriMese = data.getMonth() !== meseVisto.getMonth();
-          const isOggi = key === toDateKey(oggi);
+          const selezionato = key === chiaveSelezionato;
+          const etichetta = data.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
           return (
-            <div
-              key={idx}
-              className={`calendar-day ${fuoriMese ? 'calendar-day--muted' : ''} ${isOggi ? 'calendar-day--today' : ''}`}
-              onClick={() => (eventiGiorno.length > 0 ? onApriGiorno(data) : permessi.puoGestireEventi ? onNuovoEvento(data) : null)}
-              role="button"
+            <button
+              type="button"
+              key={key}
+              className={`cal-day${fuoriMese ? ' cal-day--fuori' : ''}${key === chiaveOggi ? ' cal-day--oggi' : ''}${selezionato ? ' cal-day--sel' : ''}`}
+              onClick={() => onSelezionaGiorno(data)}
+              aria-pressed={selezionato}
+              aria-label={eventiGiorno.length > 0 ? `${etichetta}, ${eventiGiorno.length} ${eventiGiorno.length === 1 ? 'evento' : 'eventi'}` : etichetta}
             >
-              <span className="calendar-day-number">{data.getDate()}</span>
-              <div className="calendar-day-events">
-                {eventiGiorno.slice(0, 2).map((ev) => {
-                  const icone = iconeStato(ev, permessi);
-                  return (
-                    <span key={ev.id} className="calendar-event-pill" title={ev.nome}>
-                      {ev.nome}
-                      {icone.length > 0 && (
-                        <span className="calendar-status-icons">{icone}</span>
-                      )}
-                    </span>
-                  );
-                })}
-                {eventiGiorno.length > 2 && (
-                  <span className="calendar-event-more">+{eventiGiorno.length - 2} altri</span>
-                )}
-              </div>
-            </div>
+              <span className="cal-day-num">{data.getDate()}</span>
+              {eventiGiorno.length > 0 && (
+                <span className="cal-dots" aria-hidden="true">
+                  {eventiGiorno.slice(0, 3).map((ev) => (
+                    <i key={ev.id} className={`cal-dot cal-tipo--${coloreTipo(ev.tipo)}`}></i>
+                  ))}
+                </span>
+              )}
+              <span className="cal-pills" aria-hidden="true">
+                {eventiGiorno.slice(0, 2).map((ev) => (
+                  <span key={ev.id} className={`cal-pill cal-tipo--${coloreTipo(ev.tipo)}`} title={ev.nome}>
+                    {ev.nome}
+                    {iconeStato(ev, permessi)}
+                  </span>
+                ))}
+                {eventiGiorno.length > 2 && <span className="cal-more">+{eventiGiorno.length - 2} altri</span>}
+              </span>
+            </button>
           );
         })}
       </div>
-    </>
+    </section>
   );
 }
 

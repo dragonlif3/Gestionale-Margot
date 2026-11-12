@@ -1,0 +1,55 @@
+/* ============================================================
+   HOME — stile Margot
+   Tessere colorate con i numeri che servono al ruolo e, sotto, riquadri con gli eventi.
+   ============================================================ */
+
+.dash-pagina { padding-bottom: 40px; }
+.dash-saluto small { display: block; font: 700 12px var(--font-body); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+.dash-saluto h2 { margin: 2px 0 20px; }
+
+/* ---- Tessere ---- */
+.dash-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
+.dash-tile { display: flex; flex-direction: column; gap: 2px; min-height: 132px; padding: 16px 18px; border-radius: 26px; text-decoration: none; color: var(--ink); box-shadow: var(--shadow-sm); transition: transform .12s; }
+.dash-tile:hover { transform: translateY(-2px); color: var(--ink); }
+.dash-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.dash-tile-etichetta { font: 700 12px var(--font-body); letter-spacing: .08em; text-transform: uppercase; }
+.dash-tile-numero { font: 400 52px/1.05 var(--font-heading); }
+.dash-tile--viola { background: var(--violet); color: #fff; }
+.dash-tile--viola:hover { color: #fff; }
+.dash-tile--verde { background: var(--teal); }
+.dash-tile--sole { background: var(--sun); }
+.dash-tile--arancio { background: var(--orange); }
+.dash-tile--lilla { background: var(--lilac); }
+.dash-extra { font: 700 13px var(--font-body); }
+.dash-urgenti { align-self: flex-start; background: var(--ink); color: #fff; border-radius: 999px; padding: 2px 12px; font: 700 12px var(--font-body); }
+
+/* ---- Riquadri ---- */
+.dash-pannelli { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.dash-pannello { background: #fff; border-radius: 28px; padding: 20px 20px 14px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; }
+.dash-pannello-titolo { margin: 0 0 8px; font-size: 1.5rem; }
+.dash-lista { list-style: none; margin: 0; padding: 0; flex: 1; }
+.dash-vuoto { margin: 6px 0 12px; padding: 18px; text-align: center; color: var(--ink-soft); font-weight: 600; border: 2px dashed var(--line); border-radius: 20px; flex: 1; }
+.dash-pannello-piede { padding-top: 10px; text-align: right; font-weight: 700; font-size: 14px; }
+
+.dash-riga { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.dash-riga:first-child { border-top: 0; }
+.dash-data { flex: none; width: 54px; height: 54px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--lilac); color: var(--ink); line-height: 1; }
+.dash-data b { font: 400 22px/1 var(--font-heading); }
+.dash-data small { font: 700 10px var(--font-body); letter-spacing: .04em; }
+.dash-tipo--viola { background: var(--violet); color: #fff; }
+.dash-tipo--arancio { background: var(--orange); }
+.dash-tipo--lime { background: var(--lime); }
+.dash-tipo--verde { background: var(--teal); }
+.dash-riga-testo { flex: 1; min-width: 0; }
+.dash-riga-nome { font-weight: 700; overflow-wrap: anywhere; }
+.dash-riga-sotto { font: 600 13px var(--font-body); color: var(--ink-soft); }
+.dash-riga-destra { flex: none; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 45%; }
+
+@media (min-width: 768px) {
+  .dash-tiles { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .dash-tile:last-child:nth-child(odd) { grid-column: auto; }
+}
+@media (min-width: 992px) {
+  .dash-pannelli { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dash-pannello--intero { grid-column: 1 / -1; }
+}
